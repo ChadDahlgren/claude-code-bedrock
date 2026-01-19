@@ -594,28 +594,28 @@ Project: my-personal-project • Region: us-central1
 
 Select Claude model
 
-  [1] Claude Sonnet 4 ← recommended
+  [1] Claude Sonnet 4.5 ← recommended
       Best balance of speed and capability
 
-  [2] Claude Opus 4
+  [2] Claude Opus 4.5
       Most capable, best for complex tasks
 
-  [3] Claude Sonnet 3.5 v2
+  [3] Claude Sonnet 4
       Previous generation Sonnet
 
-  [4] Claude Haiku 3.5
+  [4] Claude Haiku 4.5
       Fastest, good for simple tasks
 
 Model [1]:
 ```
 
-Model ID mapping:
-- `[1]` → `claude-sonnet-4-20250514`
-- `[2]` → `claude-opus-4-20250514`
-- `[3]` → `claude-3-5-sonnet-v2@20241022`
-- `[4]` → `claude-3-5-haiku@20241022`
+Model ID mapping (use exact IDs with @ separator):
+- `[1]` → `claude-sonnet-4-5@20250929` (Claude Sonnet 4.5)
+- `[2]` → `claude-opus-4-5@20251101` (Claude Opus 4.5 - most capable)
+- `[3]` → `claude-sonnet-4@20250514` (Claude Sonnet 4)
+- `[4]` → `claude-haiku-4-5@20251001` (Claude Haiku 4.5 - fastest)
 
-Default to option `[1]` (Claude Sonnet 4) as it's the best balance of capability and speed.
+Default to option `[1]` (Claude Sonnet 4.5) as it's the best balance of capability and speed.
 
 **IMPORTANT**: Do NOT allow selection of models that aren't available on Vertex AI. Specifically, `claude-opus-4-5-20251101` (Opus 4.5) is NOT available on Vertex.
 

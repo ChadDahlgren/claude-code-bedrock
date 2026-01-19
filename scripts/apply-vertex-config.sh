@@ -30,7 +30,7 @@ fi
 
 PROJECT_ID="$1"
 REGION="$2"
-MODEL_ID="${3:-claude-sonnet-4-20250514}"
+MODEL_ID="${3:-claude-sonnet-4-5@20250929}"
 
 SETTINGS_FILE="${HOME}/.claude/settings.json"
 SETTINGS_DIR="${HOME}/.claude"

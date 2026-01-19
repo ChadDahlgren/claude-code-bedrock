@@ -16,12 +16,15 @@ fi
 
 # Known Claude models available on Vertex AI (as of Jan 2025)
 # Format: model-id|display-name|description
+# Source: https://platform.claude.com/docs/en/api/claude-on-vertex-ai
 KNOWN_MODELS=(
-    "claude-sonnet-4-20250514|Claude Sonnet 4|Latest Sonnet model, best balance of speed and capability"
-    "claude-opus-4-20250514|Claude Opus 4|Most capable model, best for complex tasks"
-    "claude-3-5-sonnet-v2@20241022|Claude Sonnet 3.5 v2|Previous generation Sonnet"
-    "claude-3-5-sonnet@20240620|Claude Sonnet 3.5|Previous generation Sonnet (original)"
-    "claude-3-5-haiku@20241022|Claude Haiku 3.5|Fastest model, good for simple tasks"
+    "claude-sonnet-4-5@20250929|Claude Sonnet 4.5|Best balance of speed and capability (recommended)"
+    "claude-opus-4-5@20251101|Claude Opus 4.5|Most capable model, best for complex tasks"
+    "claude-opus-4-1@20250805|Claude Opus 4.1|Previous Opus, focused on agentic tasks"
+    "claude-opus-4@20250514|Claude Opus 4|Older Opus generation"
+    "claude-sonnet-4@20250514|Claude Sonnet 4|Previous generation Sonnet"
+    "claude-haiku-4-5@20251001|Claude Haiku 4.5|Fastest model, good for simple tasks"
+    "claude-3-haiku@20240307|Claude Haiku 3|Legacy Haiku model"
 )
 
 # Try to verify at least one model is accessible by checking the endpoint
@@ -72,7 +75,7 @@ done
 
 echo ""
 echo "  ],"
-echo "  \"recommended\": \"claude-sonnet-4-20250514\""
+echo "  \"recommended\": \"claude-sonnet-4-5@20250929\""
 echo "}"
 
 exit 0

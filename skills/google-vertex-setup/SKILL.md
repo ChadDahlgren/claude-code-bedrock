@@ -17,35 +17,41 @@ As of January 2025, Claude models are available in these Google Cloud regions:
 
 ## Claude Model Naming in Vertex AI
 
-Vertex uses specific model names with version identifiers that differ from the Anthropic API.
+Vertex uses specific model names with version identifiers. **Important**: Use `@` separator (not `-`) before the date.
 
 ### Model ID Format
 ```
-claude-sonnet-4-20250514
-claude-opus-4-20250514
+claude-sonnet-4-5@20250929
+claude-opus-4-5@20251101
 ```
 
 ### Available Models (as of January 2025)
-- **Claude Sonnet 4**: `claude-sonnet-4-20250514` ← recommended
-- **Claude Opus 4**: `claude-opus-4-20250514`
-- **Claude Sonnet 3.5 v2**: `claude-3-5-sonnet-v2@20241022`
-- **Claude Sonnet 3.5**: `claude-3-5-sonnet@20240620`
-- **Claude Haiku 3.5**: `claude-3-5-haiku@20241022`
+| Model | Vertex AI API model ID |
+|-------|----------------------|
+| Claude Sonnet 4.5 | `claude-sonnet-4-5@20250929` ← recommended |
+| Claude Opus 4.5 | `claude-opus-4-5@20251101` |
+| Claude Opus 4.1 | `claude-opus-4-1@20250805` |
+| Claude Opus 4 | `claude-opus-4@20250514` |
+| Claude Sonnet 4 | `claude-sonnet-4@20250514` |
+| Claude Haiku 4.5 | `claude-haiku-4-5@20251001` |
+| Claude Haiku 3 | `claude-3-haiku@20240307` |
 
-### Models NOT Available on Vertex
-- **Claude Opus 4.5** (`claude-opus-4-5-20251101`) - NOT available on Vertex AI
-
-**IMPORTANT**: When switching to Vertex AI, you must select a model from the available list above. The default Anthropic API model (Opus 4.5) will NOT work on Vertex.
+### Deprecated Models (avoid these)
+- Claude Sonnet 3.7: `claude-3-7-sonnet@20250219` (deprecated Oct 2025)
+- Claude Haiku 3.5: `claude-3-5-haiku@20241022` (deprecated Dec 2025)
 
 ### Setting the Model
 Set `ANTHROPIC_MODEL` in `~/.claude/settings.json`:
 ```json
 {
   "env": {
-    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514"
+    "ANTHROPIC_MODEL": "claude-sonnet-4-5@20250929"
   }
 }
 ```
+
+### Global vs Regional Endpoints
+For Claude 4.5+ models, you can use `region = "global"` for dynamic routing and better availability. Regional endpoints (like `us-central1`) have a 10% pricing premium but guarantee data residency.
 
 ## Google Cloud CLI (gcloud)
 
