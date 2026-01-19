@@ -21,10 +21,10 @@ Based on initial testing (January 2025), here are the planned improvements:
 **Problem**: `/provider:switch` currently requires AI conversation.
 
 **Solution**:
-- [ ] Make `/provider:switch` a direct settings toggle
-- [ ] Just flip `CLAUDE_CODE_USE_VERTEX` between "0" and "1"
-- [ ] No restart needed (Claude Code reads settings.json dynamically)
-- [ ] Output: "Switched to [Provider]. Ready to use."
+- [x] Make `/provider:switch` a direct settings toggle
+- [x] Just flip `CLAUDE_CODE_USE_VERTEX` between "0" and "1"
+- [x] No restart needed (Claude Code reads settings.json dynamically)
+- [x] Output: "Switched to [Provider]. Ready to use."
 
 ### 3. Add "Anthropic API" as Provider Option
 **Problem**: No easy way to switch back to default Anthropic API.
@@ -81,6 +81,7 @@ Based on initial testing (January 2025), here are the planned improvements:
 - [x] Basic /provider:diagnose command
 - [x] gcloud CLI integration scripts
 - [x] Plugin.json with correct format (frontmatter, string repository)
+- [x] Instant toggle for /provider:switch (no AI conversation, no restart needed)
 
 ## Notes from Testing
 
