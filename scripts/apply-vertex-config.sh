@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 #
-# apply-vertex-config.sh <project-id> <region>
+# apply-vertex-config.sh <project-id> <region> [model-id]
 # Apply Google Vertex AI configuration to ~/.claude/settings.json
 #
 # This script safely merges the new configuration with existing settings,
 # preserving MCP servers, hooks, and other user configurations.
+#
+# Arguments:
+#   project-id: Google Cloud project ID
+#   region: Vertex AI region (e.g., us-east5)
+#   model-id: (optional) Claude model ID for Vertex AI
+#             Default: claude-sonnet-4-20250514
 #
 # Exit codes:
 #   0 - Configuration applied successfully
@@ -16,14 +22,15 @@
 
 set -euo pipefail
 
-# Check arguments
-if [ $# -ne 2 ]; then
+# Check arguments (model is optional)
+if [ $# -lt 2 ]; then
     echo "error missing-arguments"
     exit 1
 fi
 
 PROJECT_ID="$1"
 REGION="$2"
+MODEL_ID="${3:-claude-sonnet-4-20250514}"
 
 SETTINGS_FILE="${HOME}/.claude/settings.json"
 SETTINGS_DIR="${HOME}/.claude"
@@ -42,7 +49,7 @@ fi
 
 # Use Python to safely merge JSON
 # This preserves all existing settings while adding/updating Vertex config
-python3 << 'EOF' "$EXISTING_SETTINGS" "$PROJECT_ID" "$REGION" "$SETTINGS_FILE"
+python3 << 'EOF' "$EXISTING_SETTINGS" "$PROJECT_ID" "$REGION" "$MODEL_ID" "$SETTINGS_FILE"
 import json
 import sys
 
@@ -51,7 +58,8 @@ try:
     existing_json = sys.argv[1]
     project_id = sys.argv[2]
     region = sys.argv[3]
-    settings_file = sys.argv[4]
+    model_id = sys.argv[4]
+    settings_file = sys.argv[5]
 
     # Parse existing settings
     settings = json.loads(existing_json)
@@ -64,6 +72,7 @@ try:
     settings["env"]["CLAUDE_CODE_USE_VERTEX"] = "1"
     settings["env"]["GOOGLE_PROJECT_ID"] = project_id
     settings["env"]["ANTHROPIC_VERTEX_REGION"] = region
+    settings["env"]["ANTHROPIC_MODEL"] = model_id
 
     # If Bedrock was enabled, disable it (only one provider at a time)
     if "CLAUDE_CODE_USE_BEDROCK" in settings["env"]:

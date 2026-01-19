@@ -17,21 +17,35 @@ As of January 2025, Claude models are available in these Google Cloud regions:
 
 ## Claude Model Naming in Vertex AI
 
-Vertex uses specific model names with version identifiers:
+Vertex uses specific model names with version identifiers that differ from the Anthropic API.
 
 ### Model ID Format
 ```
-claude-3-5-sonnet@20240620
-claude-opus-4@20250514
+claude-sonnet-4-20250514
+claude-opus-4-20250514
 ```
 
-### Available Models
-- **Claude Opus 4**: `claude-opus-4@20250514`
-- **Claude Sonnet 4.5**: `claude-3-5-sonnet-v2@20241022`
+### Available Models (as of January 2025)
+- **Claude Sonnet 4**: `claude-sonnet-4-20250514` ← recommended
+- **Claude Opus 4**: `claude-opus-4-20250514`
+- **Claude Sonnet 3.5 v2**: `claude-3-5-sonnet-v2@20241022`
 - **Claude Sonnet 3.5**: `claude-3-5-sonnet@20240620`
 - **Claude Haiku 3.5**: `claude-3-5-haiku@20241022`
 
-Claude Code automatically uses the appropriate model IDs when Vertex mode is enabled.
+### Models NOT Available on Vertex
+- **Claude Opus 4.5** (`claude-opus-4-5-20251101`) - NOT available on Vertex AI
+
+**IMPORTANT**: When switching to Vertex AI, you must select a model from the available list above. The default Anthropic API model (Opus 4.5) will NOT work on Vertex.
+
+### Setting the Model
+Set `ANTHROPIC_MODEL` in `~/.claude/settings.json`:
+```json
+{
+  "env": {
+    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514"
+  }
+}
+```
 
 ## Google Cloud CLI (gcloud)
 

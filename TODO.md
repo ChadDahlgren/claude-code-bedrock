@@ -8,14 +8,11 @@ Based on initial testing (January 2025), here are the planned improvements:
 **Problem**: User switched to Vertex AI but Opus 4.5 isn't available there, breaking Claude Code.
 
 **Solution**:
-- [ ] Query available models before completing setup:
-  ```bash
-  gcloud ai models list --region=<region> --project=<project>
-  ```
-- [ ] Auto-select best equivalent model (Sonnet → Sonnet, etc.)
-- [ ] Set `ANTHROPIC_MODEL` env var to valid Vertex model ID
-- [ ] Block switching if no compatible model exists
-- [ ] Show warning about model differences
+- [x] Add model selection step to Vertex setup flow
+- [x] Present only models available on Vertex AI
+- [x] Set `ANTHROPIC_MODEL` env var to valid Vertex model ID
+- [x] Default to Claude Sonnet 4 (best balance of speed/capability)
+- [x] Document which models are NOT available (Opus 4.5)
 
 ### 2. Instant Toggle (No AI Needed)
 **Problem**: `/provider:switch` currently requires AI conversation.
@@ -82,6 +79,7 @@ Based on initial testing (January 2025), here are the planned improvements:
 - [x] gcloud CLI integration scripts
 - [x] Plugin.json with correct format (frontmatter, string repository)
 - [x] Instant toggle for /provider:switch (no AI conversation, no restart needed)
+- [x] Model selection in Vertex setup (prevents invalid model errors)
 
 ## Notes from Testing
 

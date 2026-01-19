@@ -582,11 +582,48 @@ This may take a minute...
 **If API already enabled:**
 Continue to Vertex Screen 6.
 
-### Vertex Screen 6: Apply Configuration
+### Vertex Screen 6: Select Model
+
+**CRITICAL**: Claude Code on Vertex AI requires a model that's actually available on Vertex. Different models are available compared to the Anthropic API.
+
+Show model selection:
 
 ```
 ❯ /provider
 Project: my-personal-project • Region: us-central1
+
+Select Claude model
+
+  [1] Claude Sonnet 4 ← recommended
+      Best balance of speed and capability
+
+  [2] Claude Opus 4
+      Most capable, best for complex tasks
+
+  [3] Claude Sonnet 3.5 v2
+      Previous generation Sonnet
+
+  [4] Claude Haiku 3.5
+      Fastest, good for simple tasks
+
+Model [1]:
+```
+
+Model ID mapping:
+- `[1]` → `claude-sonnet-4-20250514`
+- `[2]` → `claude-opus-4-20250514`
+- `[3]` → `claude-3-5-sonnet-v2@20241022`
+- `[4]` → `claude-3-5-haiku@20241022`
+
+Default to option `[1]` (Claude Sonnet 4) as it's the best balance of capability and speed.
+
+**IMPORTANT**: Do NOT allow selection of models that aren't available on Vertex AI. Specifically, `claude-opus-4-5-20251101` (Opus 4.5) is NOT available on Vertex.
+
+### Vertex Screen 7: Apply Configuration
+
+```
+❯ /provider
+Project: my-personal-project • Region: us-central1 • Model: Claude Sonnet 4
 
 ✓ Vertex AI API enabled
 
@@ -595,6 +632,7 @@ Applying configuration...
 ✓ Enabled Vertex AI mode
 ✓ Set project to my-personal-project
 ✓ Set region to us-central1
+✓ Set model to claude-sonnet-4-20250514
 ✓ Configured auto-refresh
 
 Saved to ~/.claude/settings.json
@@ -604,7 +642,7 @@ Saved to ~/.claude/settings.json
 
 Use the script:
 ```bash
-bash ${CLAUDE_PLUGIN_ROOT}/scripts/apply-vertex-config.sh <project-id> <region>
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/apply-vertex-config.sh <project-id> <region> <model-id>
 ```
 
 This will:
@@ -616,13 +654,14 @@ This will:
   "env": {
     "CLAUDE_CODE_USE_VERTEX": "1",
     "GOOGLE_PROJECT_ID": "my-personal-project",
-    "ANTHROPIC_VERTEX_REGION": "us-central1"
+    "ANTHROPIC_VERTEX_REGION": "us-central1",
+    "ANTHROPIC_MODEL": "claude-sonnet-4-20250514"
   },
   "vertexAuthRefresh": "gcloud auth application-default login"
 }
 ```
 
-### Vertex Screen 7: Success
+### Vertex Screen 8: Success
 
 ```
 ────────────────────────────────────────────
@@ -632,10 +671,10 @@ This will:
   Provider:     Google Vertex AI
   Project:      my-personal-project
   Region:       us-central1
+  Model:        Claude Sonnet 4
   Auto-refresh: on
 
-Restart required
-Exit Claude Code and run claude again to use Vertex AI.
+Ready to use (no restart needed).
 
 Run /provider:status to check configuration anytime.
 ```
@@ -718,6 +757,8 @@ Throughout the flow, keep track of:
 - `project_id` (e.g., "my-personal-project")
 - `project_name` (friendly name for display)
 - `vertex_region` (e.g., "us-central1")
+- `model_id` (e.g., "claude-sonnet-4-20250514")
+- `model_display_name` (e.g., "Claude Sonnet 4")
 - `api_enabled` (true/false)
 
 ## Testing Notes
