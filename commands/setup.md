@@ -582,7 +582,55 @@ This may take a minute...
 **If API already enabled:**
 Continue to Vertex Screen 6.
 
-### Vertex Screen 6: Select Model
+### Vertex Screen 6: Check Claude Model Access
+
+After the API is enabled, check if Claude models are accessible:
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-claude-access.sh <project-id> <region>
+```
+
+**If Claude models are NOT accessible (returns "not-enabled"):**
+
+```
+❯ /provider
+Project: my-personal-project • Region: us-central1
+
+Checking Claude model access...
+
+! Claude models not enabled
+
+To use Claude on Vertex AI, you need to enable it in Model Garden.
+
+Steps:
+  1. Open Model Garden (link below)
+  2. Search for "Claude"
+  3. Click on "Claude Sonnet 4.5" (or any Claude model)
+  4. Click "Enable" and accept the terms
+
+https://console.cloud.google.com/vertex-ai/model-garden?project=<project-id>
+
+Press Enter when done, or [q] to cancel:
+```
+
+Wait for the user to confirm, then re-check access. If still not working:
+
+```
+Still unable to access Claude models.
+
+Make sure you:
+  • Selected a Claude model in Model Garden
+  • Clicked "Enable" on the model card
+  • Accepted any terms/agreements
+
+Try again? [y/n/q]:
+```
+
+**If Claude models ARE accessible (returns "ok"):**
+
+Continue to model selection (Screen 7).
+
+### Vertex Screen 7: Select Model
 
 **CRITICAL**: Claude Code on Vertex AI requires a model that's actually available on Vertex. Different models are available compared to the Anthropic API.
 
@@ -619,7 +667,7 @@ Default to option `[1]` (Claude Sonnet 4.5) as it's the best balance of capabili
 
 **IMPORTANT**: Do NOT allow selection of models that aren't available on Vertex AI. Specifically, `claude-opus-4-5-20251101` (Opus 4.5) is NOT available on Vertex.
 
-### Vertex Screen 7: Apply Configuration
+### Vertex Screen 8: Apply Configuration
 
 ```
 ❯ /provider
@@ -661,7 +709,7 @@ This will:
 }
 ```
 
-### Vertex Screen 8: Success
+### Vertex Screen 9: Success
 
 ```
 ────────────────────────────────────────────
