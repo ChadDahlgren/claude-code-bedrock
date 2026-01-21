@@ -127,6 +127,9 @@ Or use AWS managed policy: `AmazonBedrockFullAccess`
 | Profile not found | `aws configure list-profiles` to list, `aws configure sso` to create |
 | Access denied | Ask admin for `AmazonBedrockFullAccess` policy |
 | Model not available | Use inference profile format (`global.anthropic...`), check region supports it |
+| Network timeout | Check internet connection, VPN, or corporate firewall |
+| "on-demand throughput isn't supported" | Must use inference profile (add `global.` prefix) |
+| Region not supported | Try `us-west-2` or `us-east-1` (best Bedrock availability) |
 
 ## AWS CLI Installation
 

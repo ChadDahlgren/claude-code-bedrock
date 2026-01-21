@@ -33,7 +33,11 @@ Skip providers that aren't configured.
 
 ## Implementation
 
-Read settings, then update the `CLAUDE_CODE_USE_*` flags:
+Use `AskUserQuestion`:
+- "Switch to {target provider}?"
+- Options: "Yes, switch" / "Cancel"
+
+If yes, read settings and update the `CLAUDE_CODE_USE_*` flags:
 
 **To switch to Bedrock:**
 ```json

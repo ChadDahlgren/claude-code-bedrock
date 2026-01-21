@@ -129,6 +129,9 @@ For CI/CD or server deployments, use a service account instead of user credentia
 | Project not found | `gcloud projects list` to see available projects |
 | API not enabled | `gcloud services enable aiplatform.googleapis.com --project=<project>` |
 | Billing required | Enable billing; new users get $300 free credit |
+| 404 on model call | Enable Claude in Model Garden (see above) |
+| Network timeout | Check internet connection, VPN, or corporate firewall |
+| Invalid model format | Use `@` separator: `claude-opus-4-5@20251101` (not `-`) |
 
 ## gcloud CLI Installation
 

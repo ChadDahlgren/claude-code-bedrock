@@ -22,7 +22,11 @@ Use `AskUserQuestion`:
 which aws && aws --version
 ```
 
-**Not installed?** Offer to install: `brew install awscli`
+**Not installed?** Use `AskUserQuestion`:
+- "AWS CLI is required. Install it now?"
+- Options: "Yes, install with Homebrew" / "No, I'll install manually"
+
+If yes: `brew install awscli`
 
 ### Step 2: Select or Create Profile
 
@@ -37,7 +41,11 @@ aws configure list-profiles
 - SSO region (e.g., `us-west-2`)
 - Profile name (e.g., `work-dev`)
 
-Then tell user to run in their terminal:
+Use `AskUserQuestion`:
+- "Ready to configure AWS SSO? You'll need to run a command in your terminal."
+- Options: "Yes, show me the command" / "Cancel setup"
+
+If yes, tell user to run in their terminal:
 
 ```
 Run: aws configure sso
@@ -50,6 +58,10 @@ Enter these values when prompted:
 
 Complete browser auth, then type 'done' here.
 ```
+
+Use `AskUserQuestion`:
+- "Did you complete the SSO setup?"
+- Options: "Yes, it's done" / "I need help"
 
 Verify: `aws configure list-profiles | grep -w "{profile_name}"`
 
@@ -81,7 +93,12 @@ Let user select. Use the exact `inferenceProfileId` returned.
 
 **Why inference profiles?** Claude 4.5 models require inference profiles for on-demand access. The `global.` prefix is recommended for best availability and dynamic routing across all regions.
 
-### Step 6: Apply Configuration
+### Step 6: Confirm and Apply
+
+Use `AskUserQuestion`:
+- "Ready to apply this configuration?"
+- Show summary: Profile: {profile}, Region: {region}, Model: {model}
+- Options: "Yes, apply" / "No, go back"
 
 Merge into `~/.claude/settings.json` (preserve existing settings):
 
@@ -123,7 +140,11 @@ To undo: set "CLAUDE_CODE_USE_BEDROCK": "0" in ~/.claude/settings.json
 which gcloud && gcloud --version | head -1
 ```
 
-**Not installed?** Offer to install: `brew install google-cloud-sdk`
+**Not installed?** Use `AskUserQuestion`:
+- "gcloud CLI is required. Install it now?"
+- Options: "Yes, install with Homebrew" / "No, I'll install manually"
+
+If yes: `brew install google-cloud-sdk`
 
 ### Step 2: Authenticate
 
@@ -182,7 +203,12 @@ Vertex format: `claude-opus-4-5@20251101` (uses `@` separator)
 
 Let user select from available models.
 
-### Step 8: Apply Configuration
+### Step 8: Confirm and Apply
+
+Use `AskUserQuestion`:
+- "Ready to apply this configuration?"
+- Show summary: Project: {project}, Region: {region}, Model: {model}
+- Options: "Yes, apply" / "No, go back"
 
 Merge into `~/.claude/settings.json` (preserve existing settings):
 

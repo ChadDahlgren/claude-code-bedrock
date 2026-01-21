@@ -16,6 +16,11 @@ Re-authenticate the current provider's session.
 
 If `CLAUDE_CODE_USE_BEDROCK` is `"1"`:
 
+Use `AskUserQuestion`:
+- "Re-authenticate AWS Bedrock? This will open your browser."
+- Options: "Yes, open browser" / "Cancel"
+
+If yes:
 ```bash
 aws sso login --profile <AWS_PROFILE>
 ```
@@ -24,8 +29,6 @@ aws sso login --profile <AWS_PROFILE>
 ```
 Re-authenticating AWS Bedrock
 Profile: <profile>
-
-Running: aws sso login --profile <profile>
 
 Opening browser for SSO login...
 ```
@@ -42,6 +45,11 @@ Run /provider:status to verify.
 
 If `CLAUDE_CODE_USE_VERTEX` is `"1"`:
 
+Use `AskUserQuestion`:
+- "Re-authenticate Google Vertex AI? This will open your browser."
+- Options: "Yes, open browser" / "Cancel"
+
+If yes:
 ```bash
 gcloud auth application-default login
 ```
@@ -50,8 +58,6 @@ gcloud auth application-default login
 ```
 Re-authenticating Google Vertex AI
 Project: <project>
-
-Running: gcloud auth application-default login
 
 Opening browser for Google authentication...
 ```
