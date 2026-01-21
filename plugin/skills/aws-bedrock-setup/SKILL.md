@@ -22,21 +22,22 @@ Claude 4.5 models require **inference profiles**. You cannot use the raw model I
 400 Invocation of model ID anthropic.claude-opus-4-5-20251101-v1:0 with on-demand throughput isn't supported.
 ```
 
-**Solution:** Add region prefix to model ID:
+**Solution:** Use an inference profile with region prefix:
 
-| Prefix | Coverage |
-|--------|----------|
-| `us.` | US cross-region |
-| `eu.` | EU cross-region |
-| `apac.` | Asia-Pacific |
+| Prefix | Coverage | Notes |
+|--------|----------|-------|
+| `global.` | All regions | **Recommended** - best availability, dynamic routing |
+| `us.` | US cross-region | US-only routing |
+| `eu.` | EU cross-region | EU-only routing |
+| `apac.` | Asia-Pacific | APAC-only routing |
 
 **Example:**
 ```
 # Wrong (won't work for Claude 4.5)
 anthropic.claude-opus-4-5-20251101-v1:0
 
-# Correct (inference profile)
-us.anthropic.claude-opus-4-5-20251101-v1:0
+# Correct (inference profile with global routing)
+global.anthropic.claude-opus-4-5-20251101-v1:0
 ```
 
 **Query available inference profiles:**
@@ -108,7 +109,7 @@ Or use AWS managed policy: `AmazonBedrockFullAccess`
     "CLAUDE_CODE_USE_VERTEX": "0",
     "AWS_PROFILE": "my-profile-name",
     "AWS_REGION": "us-west-2",
-    "ANTHROPIC_MODEL": "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    "ANTHROPIC_MODEL": "global.anthropic.claude-opus-4-5-20251101-v1:0"
   },
   "bedrockAuthRefresh": "aws sso login --profile my-profile-name"
 }
@@ -127,7 +128,7 @@ Or use AWS managed policy: `AmazonBedrockFullAccess`
 | Token expired | `aws sso login --profile <profile>` |
 | Profile not found | `aws configure list-profiles` to list, `aws configure sso` to create |
 | Access denied | Ask admin for `AmazonBedrockFullAccess` policy |
-| Model not available | Use inference profile format (`us.anthropic...`), check region supports it |
+| Model not available | Use inference profile format (`global.anthropic...`), check region supports it |
 
 ## AWS CLI Installation
 

@@ -20,7 +20,7 @@ Vertex uses `@` separator (not `-`) before the date:
 claude-{model-name}@{date}
 ```
 
-**Example:** `claude-sonnet-4-5@20250929`
+**Example:** `claude-opus-4-5@20251101`
 
 **Verify model availability:**
 ```bash
@@ -81,7 +81,7 @@ Permissions included:
     "CLAUDE_CODE_USE_BEDROCK": "0",
     "GOOGLE_PROJECT_ID": "my-project-id",
     "ANTHROPIC_VERTEX_REGION": "us-central1",
-    "ANTHROPIC_MODEL": "claude-sonnet-4-5@20250929"
+    "ANTHROPIC_MODEL": "claude-opus-4-5@20251101"
   },
   "vertexAuthRefresh": "gcloud auth application-default login"
 }

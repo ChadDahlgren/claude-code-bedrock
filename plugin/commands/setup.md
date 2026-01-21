@@ -79,7 +79,7 @@ aws bedrock list-inference-profiles --profile <profile> --region <region> --outp
 
 Let user select. Use the exact `inferenceProfileId` returned.
 
-**Why inference profiles?** Claude 4.5 models require inference profiles for on-demand access. The `us.` prefix enables cross-region load balancing.
+**Why inference profiles?** Claude 4.5 models require inference profiles for on-demand access. The `global.` prefix is recommended for best availability and dynamic routing across all regions.
 
 ### Step 6: Apply Configuration
 
@@ -168,7 +168,7 @@ gcloud services list --enabled --filter="name:aiplatform.googleapis.com" --proje
 curl -s -X POST \
   -H "Authorization: Bearer $(gcloud auth application-default print-access-token)" \
   -H "Content-Type: application/json" \
-  "https://global-aiplatform.googleapis.com/v1/projects/<project>/locations/global/publishers/anthropic/models/claude-sonnet-4-5@20250929:rawPredict" \
+  "https://global-aiplatform.googleapis.com/v1/projects/<project>/locations/global/publishers/anthropic/models/claude-opus-4-5@20251101:rawPredict" \
   -d '{"anthropic_version":"vertex-2023-10-16","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
 ```
 
@@ -178,7 +178,7 @@ curl -s -X POST \
 
 ### Step 7: Select Model
 
-Vertex format: `claude-sonnet-4-5@20250929` (uses `@` separator)
+Vertex format: `claude-opus-4-5@20251101` (uses `@` separator)
 
 Let user select from available models.
 
