@@ -5,7 +5,7 @@
   "author": {
     "name": "Chad Dahlgren"
   },
-  "repository": "https://github.com/ChadDahlgren/claude-code-provider",
+  "repository": "https://github.com/ChadDahlgren/claude-code-bedrock",
   "license": "MIT",
   "keywords": [
     "aws",
