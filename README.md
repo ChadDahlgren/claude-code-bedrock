@@ -29,15 +29,30 @@ This plugin simplifies configuring Claude Code to use enterprise cloud providers
 ## Installation
 
 1. Clone this repository
-2. Install the plugin:
+2. Run Claude Code with the plugin:
    ```bash
-   claude plugin install /path/to/claude-provider
+   claude --plugin-dir /path/to/claude-code-provider/plugin
    ```
 3. Run the setup:
-   ```bash
-   claude
-   /provider
    ```
+   /provider:setup
+   ```
+
+## Project Structure
+
+```
+claude-code-provider/
+├── plugin/                 # The distributable plugin
+│   ├── commands/           # Slash commands (/provider:setup, etc.)
+│   ├── skills/             # Reference documentation for AI
+│   └── .claude-plugin/     # Plugin manifest and hooks
+├── dev/                    # Development tooling (not part of plugin)
+│   ├── scripts/            # Reset scripts, test helpers
+│   └── planning/           # Architecture docs
+├── README.md
+├── CONTRIBUTING.md
+└── LICENSE
+```
 
 ## Requirements
 

@@ -21,24 +21,29 @@ Vertex uses specific model names with version identifiers. **Important**: Use `@
 
 ### Model ID Format
 ```
-claude-sonnet-4-5@20250929
-claude-opus-4-5@20251101
+claude-{model-name}@{date}
 ```
 
-### Available Models (as of January 2025)
-| Model | Vertex AI API model ID |
-|-------|----------------------|
-| Claude Sonnet 4.5 | `claude-sonnet-4-5@20250929` ← recommended |
-| Claude Opus 4.5 | `claude-opus-4-5@20251101` |
-| Claude Opus 4.1 | `claude-opus-4-1@20250805` |
-| Claude Opus 4 | `claude-opus-4@20250514` |
-| Claude Sonnet 4 | `claude-sonnet-4@20250514` |
-| Claude Haiku 4.5 | `claude-haiku-4-5@20251001` |
-| Claude Haiku 3 | `claude-3-haiku@20240307` |
+Example: `claude-sonnet-4-5@20250929`
 
-### Deprecated Models (avoid these)
-- Claude Sonnet 3.7: `claude-3-7-sonnet@20250219` (deprecated Oct 2025)
-- Claude Haiku 3.5: `claude-3-5-haiku@20241022` (deprecated Dec 2025)
+### Check Available Models
+
+**Option 1: Anthropic's official documentation**
+https://docs.anthropic.com/en/docs/claude-code/google-vertex
+
+**Option 2: Probe the API to verify availability**
+```bash
+# Test if a model is available for your project
+curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth application-default print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://global-aiplatform.googleapis.com/v1/projects/<project-id>/locations/global/publishers/anthropic/models/<model-id>:rawPredict" \
+  -d '{"anthropic_version":"vertex-2023-10-16","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
+```
+
+If it returns a response, the model is available. If 404, it's not enabled in Model Garden.
+
+**Note**: Model availability depends on your project's Model Garden configuration. Always verify before assuming a model is available.
 
 ### Setting the Model
 Set `ANTHROPIC_MODEL` in `~/.claude/settings.json`:

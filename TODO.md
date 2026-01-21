@@ -102,7 +102,7 @@ Benefits:
 ## Completed
 
 - [x] Initial plugin structure
-- [x] AWS Bedrock setup flow (untested)
+- [x] AWS Bedrock setup flow (tested - requires inference profile for Opus 4.5)
 - [x] Google Vertex AI setup flow (tested, working)
 - [x] Basic /provider:status command
 - [x] Basic /provider:diagnose command
@@ -110,6 +110,8 @@ Benefits:
 - [x] Plugin.json with correct format (frontmatter, string repository)
 - [x] Instant toggle for /provider:switch (no AI conversation, no restart needed)
 - [x] Model selection in Vertex setup (prevents invalid model errors)
+- [x] AWS Bedrock inference profile documentation (fixes "on-demand throughput" error)
+- [x] Real-world AWS SSO flow documentation (from actual testing)
 
 ## Experimental
 
@@ -141,3 +143,8 @@ Alternative: Users can add permission rules to their `~/.claude/settings.json`:
 5. **Plugin loading**: Requires frontmatter in command files with `description` field
 6. **Naming convention**: Plugin name + file name = command (e.g., `provider` + `setup.md` = `/provider:setup`)
 7. **Wrapper scripts cause errors**: Running .sh scripts shows errors, but direct gcloud commands work fine
+8. **AWS Bedrock inference profiles**: Claude 4.5 models require inference profile format:
+   - ❌ `anthropic.claude-opus-4-5-20251101-v1:0` - FAILS with "on-demand throughput isn't supported"
+   - ✅ `us.anthropic.claude-opus-4-5-20251101-v1:0` - Works (US inference profile)
+   - Prefix options: `us.`, `eu.`, `apac.` for cross-region routing
+   - See: https://github.com/anthropics/claude-code/issues/12384

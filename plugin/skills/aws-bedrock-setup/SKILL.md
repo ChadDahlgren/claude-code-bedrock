@@ -18,20 +18,52 @@ As of January 2025, Claude models are available in these AWS regions:
 
 ## Claude Model Naming in Bedrock
 
-Bedrock uses different model names than the Anthropic API:
+Bedrock uses different model names than the Anthropic API, and Claude 4.5 models require **inference profiles**.
 
-### Model ID Format
+### Inference Profiles (CRITICAL for Claude 4.5)
+
+Claude 4.5 models cannot be invoked directly with on-demand throughput. You must use an **inference profile**.
+
+**Error you'll see without inference profile:**
 ```
-anthropic.claude-{model}-{version}
+400 Invocation of model ID anthropic.claude-opus-4-5-20251101-v1:0 with on-demand throughput isn't supported. Retry your request with the ID or ARN of an inference profile that contains this model.
 ```
 
-### Available Models
-- **Claude Opus 4.5**: `anthropic.claude-opus-4-5-v1:0`
-- **Claude Sonnet 4.5**: `anthropic.claude-sonnet-4-5-v1:0`
-- **Claude Sonnet 3.5**: `anthropic.claude-3-5-sonnet-v2:0`
-- **Claude Haiku 3.5**: `anthropic.claude-3-5-haiku-v1:0`
+### Inference Profile Format
 
-Claude Code automatically uses the appropriate model IDs when Bedrock mode is enabled.
+Add a region prefix to the model ID:
+
+| Region Prefix | Description |
+|--------------|-------------|
+| `us.` | US inference profile (cross-region in US) |
+| `eu.` | EU inference profile (cross-region in EU) |
+| `apac.` | Asia-Pacific inference profile |
+
+### Query Available Models
+
+**Always query AWS directly for current inference profiles:**
+
+```bash
+# List Claude inference profiles
+aws bedrock list-inference-profiles --region us-west-2 \
+  --query "inferenceProfileSummaries[?contains(modelArn, 'anthropic')].[inferenceProfileId,inferenceProfileName]" \
+  --output table
+```
+
+This returns the actual inference profile IDs you can use, like:
+- `us.anthropic.claude-opus-4-5-20251101-v1:0`
+- `us.anthropic.claude-sonnet-4-5-20250929-v1:0`
+
+**Use the exact IDs returned by AWS** - don't hardcode or construct them manually, as they may change.
+
+### Why Inference Profiles?
+
+Inference profiles provide:
+- Cross-region load balancing for higher throughput
+- Automatic failover during peak demand
+- Required for Claude 4.5 on-demand access
+
+Claude Code uses the `ANTHROPIC_MODEL` environment variable - set it to the inference profile ID.
 
 ## AWS SSO Configuration
 
@@ -63,6 +95,60 @@ When running `aws sso login`, AWS handles:
 6. CLI receives credentials
 
 **We don't ask for account ID or role name** because AWS SSO handles this in the browser.
+
+### Interactive `aws configure sso` Flow (Real-World Example)
+
+When running `aws configure sso` for the first time, here's the actual sequence of prompts:
+
+```
+$ aws configure sso
+
+SSO session name (Recommended): cricut-dev
+SSO start URL [None]: https://cricutawssso.awsapps.com/start
+SSO region [None]: us-west-2
+SSO registration scopes [sso:account:access]: <enter to accept default>
+
+Attempting to automatically open the SSO authorization page in your default browser.
+If the browser does not open or you wish to use a different device to authorize this request,
+open the following URL: https://device.sso.us-west-2.amazonaws.com/
+
+<browser opens - user authenticates>
+
+There are 18 AWS accounts available to you.
+Using the account ID 237489059256
+There are 2 roles available to you.
+Using the role name "Dev_Access_Non_Prod"
+
+CLI default client Region [None]: us-west-2
+CLI default output format [None]: json
+CLI profile name [Dev_Access_Non_Prod-237489059256]: cricut-dev
+
+To use this profile, specify the profile name using --profile, as shown:
+
+aws s3 ls --profile cricut-dev
+```
+
+### Prompt-by-Prompt Breakdown
+
+| Prompt | Description | Example Value |
+|--------|-------------|---------------|
+| SSO session name | Friendly name for this SSO session | `cricut-dev`, `company-sso` |
+| SSO start URL | Your company's AWS SSO portal URL | `https://company.awsapps.com/start` |
+| SSO region | Region where your SSO is configured | `us-west-2`, `us-east-1` |
+| SSO registration scopes | OAuth scopes (usually accept default) | `sso:account:access` |
+| *Browser auth* | Opens browser for authentication | *User clicks through* |
+| Account selection | AWS auto-selects or prompts | Shown as account ID |
+| Role selection | Role for that account | `Dev_Access_Non_Prod`, `PowerUser` |
+| Default client Region | Region for AWS CLI commands | `us-west-2` |
+| Default output format | CLI output format | `json`, `text`, `table` |
+| Profile name | Name to reference this profile | `cricut-dev`, `work-sandbox` |
+
+### Notes on the Interactive Flow
+
+1. **SSO session vs Profile**: The "SSO session name" can differ from the "CLI profile name" - session is for the SSO connection, profile is what you use with `--profile`
+2. **Account/Role selection**: If you have access to multiple accounts/roles, AWS will prompt you to choose
+3. **Browser authentication**: The CLI waits for you to complete auth in the browser before continuing
+4. **Profile name default**: AWS suggests a long default name like `RoleName-AccountId` - you can (and should) use a shorter custom name
 
 ## Required IAM Permissions
 
@@ -214,6 +300,28 @@ aws configure sso --profile <profile-name>
 2. If model not listed, try different region
 3. Contact AWS support to request model access
 
+### Issue: "On-demand throughput isn't supported"
+
+**Symptoms:** Error message like:
+```
+400 Invocation of model ID anthropic.claude-opus-4-5-20251101-v1:0 with on-demand throughput isn't supported. Retry your request with the ID or ARN of an inference profile that contains this model.
+```
+
+**Cause:** Claude 4.5 models require inference profiles for on-demand access
+
+**Fix:**
+Change your `ANTHROPIC_MODEL` in `~/.claude/settings.json` to use the inference profile format:
+
+```diff
+- "ANTHROPIC_MODEL": "anthropic.claude-opus-4-5-20251101-v1:0"
++ "ANTHROPIC_MODEL": "us.anthropic.claude-opus-4-5-20251101-v1:0"
+```
+
+The `us.` prefix is the US inference profile. Valid prefixes:
+- `us.` - US cross-region
+- `eu.` - EU cross-region
+- `apac.` - Asia-Pacific cross-region
+
 ### Issue: Slow Responses
 
 **Cause:** Region is geographically far from user
@@ -316,8 +424,8 @@ When things don't work, check in order:
    cat ~/.claude/settings.json | grep BEDROCK
    ```
 
-6. **Restarted Claude Code?**
-   Configuration changes require restart.
+6. **Settings correct?**
+   Changes to settings.json take effect immediately (no restart needed).
 
 ## Best Practices
 
@@ -370,14 +478,14 @@ region = us-east-1
 Switch between them by changing `AWS_PROFILE` in settings.json.
 
 ### Custom Model Selection
-Override the default model:
+Override the default model (use inference profile format for Claude 4.5):
 ```json
 {
   "env": {
     "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_PROFILE": "my-profile",
     "AWS_REGION": "us-west-2",
-    "ANTHROPIC_MODEL": "anthropic.claude-opus-4-5-v1:0"
+    "ANTHROPIC_MODEL": "us.anthropic.claude-opus-4-5-20251101-v1:0"
   }
 }
 ```

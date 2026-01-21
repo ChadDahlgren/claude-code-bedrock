@@ -8,7 +8,16 @@ You are helping the user configure Claude Code to use an enterprise cloud provid
 
 ## Your Role
 
-Guide the user through an interactive setup wizard. Follow the exact UI specifications and flows defined below. Be helpful, clear, and handle errors gracefully.
+Guide the user through an interactive setup wizard. **Follow this document as a script - execute each screen in order.**
+
+## CRITICAL INSTRUCTIONS
+
+1. **Follow the screens in order** - Do not skip steps or combine steps
+2. **Use AskUserQuestion tool** for all user choices - Do not use markdown menus
+3. **One step at a time** - Complete each screen before moving to the next
+4. **No interactive terminal commands** - Use the cheat sheet approach for `aws configure sso`
+5. **Verify after each action** - Run verification commands before proceeding
+6. **Use exact values** - When writing to settings.json, use `"1"` not `"01"`, use exact model IDs from the tables
 
 ## Design Rules
 
@@ -81,17 +90,22 @@ Continue to Screen 3.
 
 ### Screen 3: Check for Existing SSO Profiles
 
-Check for existing SSO profiles:
+Check for existing SSO profiles using AWS CLI:
 
 ```bash
-cat ~/.aws/config 2>/dev/null | grep -E "^\[profile |sso_start_url|sso_region|^region"
+aws configure list-profiles
+```
+
+For each profile found, get its region:
+```bash
+aws configure get region --profile <profile-name>
 ```
 
 **If profiles found:**
 
 Use `AskUserQuestion` tool with the profiles as options:
 - Question: "Select an AWS profile to use with Bedrock"
-- Options: List each profile found (e.g., "cricut-dev (us-east-1)", "cricut-prod (us-east-1)")
+- Options: List each profile found (e.g., "cricut-dev (us-west-2)", "cricut-prod (us-east-1)")
 - Add option: "Configure a new profile"
 
 **If NO profiles found:**
@@ -102,24 +116,46 @@ Continue to Fresh SSO Setup flow (Screen 3b).
 
 ### Screen 3b: Fresh SSO Setup (If No Profiles)
 
-**Step 1: Get SSO URL**
-Ask user for their SSO start URL (e.g., `https://company.awsapps.com/start`)
-Tell them: "Ask your IT team if you're not sure."
+**IMPORTANT**: Claude Code cannot run interactive terminal commands. Instead, give the user a "cheat sheet" to run in their own terminal.
 
-**Step 2: Run SSO Configuration**
-Use AWS CLI's interactive SSO setup:
-```bash
-aws configure sso
+Use `AskUserQuestion` tool to collect the following information:
+- Question 1: "What is your AWS SSO start URL?" (e.g., `https://company.awsapps.com/start`)
+- Question 2: "What AWS region is your SSO configured in?" (Options: us-west-2, us-east-1, eu-west-1)
+- Question 3: "What would you like to name this profile?" (e.g., `work-dev`, `company-sso`)
+
+Then display this cheat sheet for the user to run in their terminal:
+
+```
+I can't run interactive AWS commands directly. Please run this in your terminal:
+
+┌─────────────────────────────────────────────────────────────────┐
+│  aws configure sso                                              │
+│                                                                 │
+│  When prompted, enter:                                          │
+│    SSO session name: {profile_name}                             │
+│    SSO start URL: {sso_url}                                     │
+│    SSO region: {sso_region}                                     │
+│    SSO registration scopes: (press Enter for default)           │
+│                                                                 │
+│  Then complete authentication in your browser.                  │
+│                                                                 │
+│  When prompted for remaining options:                           │
+│    Default client Region: us-west-2 (or your preferred region)  │
+│    CLI default output format: json                              │
+│    CLI profile name: {profile_name}                             │
+└─────────────────────────────────────────────────────────────────┘
+
+Type 'done' when you've completed the setup, or 'cancel' to abort.
 ```
 
-This will:
-1. Prompt for SSO URL and region
-2. Open browser for authentication
-3. User selects account/role in browser (AWS handles this)
-4. Prompt for profile name and default region
-5. Return with credentials saved
+Wait for user to confirm they've completed it.
 
-After SSO setup completes, continue to Screen 4.
+Then verify the profile was created:
+```bash
+aws configure list-profiles | grep -w "{profile_name}"
+```
+
+If profile exists, continue to Screen 4. If not, ask user to try again.
 
 ### Screen 4: Select Bedrock Region
 
@@ -143,23 +179,26 @@ Tell user: "Opening browser for SSO login. Complete the authentication in your b
 
 Wait for the command to complete successfully.
 
-### Screen 6: List Available Models
+### Screen 6: Select Model
 
-Query Bedrock for available Claude models:
+**Query available Claude inference profiles directly from AWS:**
 
 ```bash
-aws bedrock list-foundation-models --by-provider anthropic --region <region> --query "modelSummaries[*].modelId" --output text
+aws bedrock list-inference-profiles --region <region> --query "inferenceProfileSummaries[?contains(modelArn, 'anthropic')].[inferenceProfileId,inferenceProfileName]" --output text
 ```
 
-This returns available Claude model IDs. Common ones:
-- `anthropic.claude-3-5-sonnet-20241022-v2:0`
-- `anthropic.claude-3-5-haiku-20241022-v1:0`
-- `anthropic.claude-3-opus-20240229-v1:0`
-- `anthropic.claude-3-sonnet-20240229-v1:0`
+This returns the actual inference profile IDs you can use, like:
+```
+us.anthropic.claude-opus-4-5-20251101-v1:0    US Anthropic Claude Opus 4.5
+us.anthropic.claude-sonnet-4-5-20250929-v1:0  US Anthropic Claude Sonnet 4.5
+us.anthropic.claude-haiku-4-5-20251001-v1:0   US Anthropic Claude Haiku 4.5
+```
 
-Use `AskUserQuestion` tool with the returned models:
+Use `AskUserQuestion` tool with the models returned by the query:
 - Question: "Select a Claude model for Bedrock"
-- Options: List the models returned by the query
+- Options: List the inference profiles returned (show the friendly name, store the ID)
+
+**Use the exact `inferenceProfileId` from the query** - don't modify or construct it manually.
 
 ### Screen 7: Show Undo Instructions (CRITICAL)
 
@@ -179,7 +218,7 @@ Or delete these lines from the "env" section:
   - AWS_REGION
   - ANTHROPIC_MODEL
 
-No restart needed - changes take effect immediately.
+You will need to restart Claude Code after setup for changes to take effect.
 
 Ready to proceed? [y/n]
 ```
@@ -204,7 +243,9 @@ Saved to ~/.claude/settings.json
 
 **Write to `~/.claude/settings.json`:**
 
-Read existing settings, merge new config (don't overwrite!):
+Read existing settings, merge new config (don't overwrite existing keys like permissions!):
+
+**EXACT values to write** (copy these exactly):
 
 ```json
 {
@@ -213,13 +254,23 @@ Read existing settings, merge new config (don't overwrite!):
     "CLAUDE_CODE_USE_VERTEX": "0",
     "AWS_PROFILE": "<profile>",
     "AWS_REGION": "<region>",
-    "ANTHROPIC_MODEL": "<model-id>"
+    "ANTHROPIC_MODEL": "<model-id-from-table>"
   },
   "bedrockAuthRefresh": "aws sso login --profile <profile>"
 }
 ```
 
+**VALUE REQUIREMENTS**:
+- `CLAUDE_CODE_USE_BEDROCK`: Must be exactly `"1"` (not `"01"`, not `1`, not `true`)
+- `CLAUDE_CODE_USE_VERTEX`: Must be exactly `"0"`
+- `ANTHROPIC_MODEL`: Use the exact `inferenceProfileId` returned by `aws bedrock list-inference-profiles`
+
+The inference profile IDs from AWS already have the correct format (e.g., `us.anthropic.claude-*`).
+```
+
 ### Screen 9: Success
+
+Display this summary:
 
 ```
 ────────────────────────────────────────────
@@ -232,13 +283,23 @@ Read existing settings, merge new config (don't overwrite!):
   Model:        <model>
   Auto-refresh: on
 
-Ready to use (no restart needed).
+⚠ RESTART REQUIRED
+  Please exit Claude Code and restart it for Bedrock to take effect.
+  Run: claude --plugin-dir <plugin-path>
 
-If something breaks, edit ~/.claude/settings.json and set:
+If something breaks after restart, edit ~/.claude/settings.json and set:
   "CLAUDE_CODE_USE_BEDROCK": "0"
 
-Run /provider:status to check configuration anytime.
+Run /provider:status after restart to verify configuration.
 ```
+
+**IMPORTANT**: End the setup by using `AskUserQuestion` tool:
+- Question: "Setup complete. Please restart Claude Code for changes to take effect. What would you like to do?"
+- Options:
+  - "Exit now (I'll restart Claude Code)"
+  - "Something went wrong, help me troubleshoot"
+
+This confirms the user understands they need to restart.
 
 ## Direct CLI Commands Reference
 
@@ -250,13 +311,18 @@ Use these commands directly - no wrapper scripts needed.
 which aws && aws --version
 
 # List SSO profiles
-cat ~/.aws/config | grep -E "^\[profile "
+aws configure list-profiles
+
+# Get profile region
+aws configure get region --profile <profile-name>
 
 # Login with SSO
 aws sso login --profile <profile-name>
 
-# List available Claude models on Bedrock
-aws bedrock list-foundation-models --by-provider anthropic --region <region> --query "modelSummaries[*].modelId" --output text
+# List available Claude inference profiles on Bedrock
+aws bedrock list-inference-profiles --region <region> \
+  --query "inferenceProfileSummaries[?contains(modelArn, 'anthropic')].[inferenceProfileId,inferenceProfileName]" \
+  --output text
 
 # Check identity
 aws sts get-caller-identity --profile <profile-name>
@@ -558,40 +624,29 @@ Continue to model selection (Screen 7).
 
 ### Vertex Screen 7: Select Model
 
-**CRITICAL**: Claude Code on Vertex AI requires a model that's actually available on Vertex. Different models are available compared to the Anthropic API.
+**Query available models from Anthropic's Vertex AI documentation:**
 
-Show model selection:
+Unlike AWS Bedrock, Vertex AI doesn't have a simple CLI command to list available Claude models.
 
-```
-❯ /provider
-Project: my-personal-project • Region: us-central1
+**Option 1: Check Anthropic's official docs**
+The current Vertex AI model IDs are documented at:
+https://docs.anthropic.com/en/docs/claude-code/google-vertex
 
-Select Claude model
-
-  [1] Claude Sonnet 4.5 ← recommended
-      Best balance of speed and capability
-
-  [2] Claude Opus 4.5
-      Most capable, best for complex tasks
-
-  [3] Claude Sonnet 4
-      Previous generation Sonnet
-
-  [4] Claude Haiku 4.5
-      Fastest, good for simple tasks
-
-Model [1]:
+**Option 2: Probe the API to check availability**
+Test if a model works by making a minimal API call:
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer $(gcloud auth application-default print-access-token)" \
+  -H "Content-Type: application/json" \
+  "https://global-aiplatform.googleapis.com/v1/projects/<project-id>/locations/global/publishers/anthropic/models/<model-id>:rawPredict" \
+  -d '{"anthropic_version":"vertex-2023-10-16","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'
 ```
 
-Model ID mapping (use exact IDs with @ separator):
-- `[1]` → `claude-sonnet-4-5@20250929` (Claude Sonnet 4.5)
-- `[2]` → `claude-opus-4-5@20251101` (Claude Opus 4.5 - most capable)
-- `[3]` → `claude-sonnet-4@20250514` (Claude Sonnet 4)
-- `[4]` → `claude-haiku-4-5@20251001` (Claude Haiku 4.5 - fastest)
+If it returns a response, the model is available. If 404, it's not enabled.
 
-Default to option `[1]` (Claude Sonnet 4.5) as it's the best balance of capability and speed.
+**Vertex model ID format**: Uses `@` separator (e.g., `claude-sonnet-4-5@20250929`)
 
-**IMPORTANT**: Do NOT allow selection of models that aren't available on Vertex AI. Specifically, `claude-opus-4-5-20251101` (Opus 4.5) is NOT available on Vertex.
+Use `AskUserQuestion` tool to let user choose, then verify their selection works with the API probe above before continuing.
 
 ### Vertex Screen 8: Show Undo Instructions (CRITICAL)
 
@@ -611,7 +666,7 @@ Or delete these lines from the "env" section:
   - ANTHROPIC_VERTEX_REGION
   - ANTHROPIC_MODEL
 
-No restart needed - changes take effect immediately.
+You will need to restart Claude Code after setup for changes to take effect.
 
 Ready to proceed? [y/n]
 ```
@@ -661,13 +716,21 @@ Saved to ~/.claude/settings.json
   Model:        <model>
   Auto-refresh: on
 
-Ready to use (no restart needed).
+⚠ RESTART REQUIRED
+  Please exit Claude Code and restart it for Vertex AI to take effect.
+  Run: claude --plugin-dir <plugin-path>
 
-If something breaks, edit ~/.claude/settings.json and set:
+If something breaks after restart, edit ~/.claude/settings.json and set:
   "CLAUDE_CODE_USE_VERTEX": "0"
 
-Run /provider:status to check configuration anytime.
+Run /provider:status after restart to verify configuration.
 ```
+
+**IMPORTANT**: End the setup by using `AskUserQuestion` tool:
+- Question: "Setup complete. Please restart Claude Code for changes to take effect. What would you like to do?"
+- Options:
+  - "Exit now (I'll restart Claude Code)"
+  - "Something went wrong, help me troubleshoot"
 
 ## Vertex Error Handling
 
