@@ -1,0 +1,25 @@
+{
+  "name": "claude-code-bedrock",
+  "owner": {
+    "name": "Chad Dahlgren"
+  },
+  "metadata": {
+    "description": "AWS Bedrock integration for Claude Code",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "bedrock",
+      "source": "./plugin",
+      "description": "Configure Claude Code to use AWS Bedrock with SSO authentication",
+      "version": "1.0.0",
+      "author": {
+        "name": "Chad Dahlgren"
+      },
+      "repository": "https://github.com/ChadDahlgren/claude-code-bedrock",
+      "license": "MIT",
+      "keywords": ["aws", "bedrock", "sso", "authentication"],
+      "category": "cloud"
+    }
+  ]
+}
