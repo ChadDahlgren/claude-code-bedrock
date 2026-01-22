@@ -11,7 +11,7 @@
     {
       "name": "bedrock",
       "source": "./plugin",
-      "description": "Configure Claude Code to use AWS Bedrock with SSO authentication",
+      "description": "AWS Bedrock integration for Claude Code. Run /bedrock:manage after install to configure SSO authentication.",
       "version": "1.0.0",
       "author": {
         "name": "Chad Dahlgren"
