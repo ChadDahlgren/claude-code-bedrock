@@ -84,6 +84,18 @@ Run `/bedrock:diagnose` to check for issues. Common problems:
 - **CLI not installed**: `brew install awscli`
 - **Permission denied**: Contact your AWS administrator
 - **Model not available**: Use inference profile with `global.` prefix
+- **Sessions expire every 8 hours**: Reconfigure SSO with `sso:account:access` scope for 90-day sessions
+
+## Session Duration
+
+By default, AWS SSO sessions last ~8 hours. The setup wizard configures refresh tokens for **up to 90-day sessions**:
+
+| Configuration | Session Duration |
+|--------------|------------------|
+| Legacy (without refresh tokens) | ~8 hours |
+| SSO Session (with refresh tokens) | Up to 90 days |
+
+The plugin detects legacy configurations and offers to reconfigure for extended sessions.
 
 ## License
 

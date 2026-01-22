@@ -66,7 +66,18 @@ This plugin includes two mechanisms to handle SSO session expiration:
 
 2. **Automatic Refresh (awsAuthRefresh)**: When configured, Claude Code automatically runs `aws sso login` when it detects expired credentials, then retries the request.
 
+3. **Refresh Token Detection**: The plugin detects if you're using legacy SSO format (8-hour sessions) and offers to reconfigure for 90-day sessions with refresh tokens.
+
 This prevents the "chicken-and-egg" problem where expired credentials would prevent Claude from helping you troubleshoot.
+
+## Session Duration
+
+| Configuration | Session Duration |
+|--------------|------------------|
+| Legacy SSO (without refresh tokens) | ~8 hours |
+| SSO Session (with refresh tokens) | Up to 90 days |
+
+The setup wizard guides you to configure `sso:account:access` scope for extended sessions.
 
 ## Troubleshooting
 
@@ -76,3 +87,4 @@ Run `/bedrock:diagnose` to check for issues. Common problems:
 - **CLI not installed**: `brew install awscli`
 - **Permission denied**: Contact your AWS administrator
 - **Model not available**: Use inference profile with `global.` prefix
+- **Sessions expire every 8 hours**: Reconfigure SSO with `sso:account:access` scope

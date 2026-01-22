@@ -53,19 +53,36 @@ If yes, tell user to run in their terminal:
 Run: aws configure sso
 
 Enter these values when prompted:
-  SSO session name:    {profile_name}
-  SSO start URL:       {sso_url}
-  SSO region:          {sso_region}
-  CLI profile name:    {profile_name}
+  SSO session name:        {profile_name}
+  SSO start URL:           {sso_url}
+  SSO region:              {sso_region}
+  SSO registration scopes: sso:account:access   ← IMPORTANT for 90-day sessions!
+  CLI profile name:        {profile_name}
 
 Complete browser auth, then type 'done' here.
 ```
+
+**Important:** The `sso:account:access` scope enables refresh tokens. Without it, sessions expire every 8 hours. With it, sessions last up to 90 days with automatic refresh.
 
 Use `AskUserQuestion`:
 - "Did you complete the SSO setup?"
 - Options: "Yes, it's done" / "I need help"
 
 Verify: `aws configure list-profiles | grep -w "{profile_name}"`
+
+### Check for Existing Profile with Refresh Tokens
+
+If user selected an existing profile, check if it has refresh tokens:
+
+```bash
+grep -A10 "\[profile {profile}\]" ~/.aws/config | grep -q "sso_session" && echo "has_refresh_tokens" || echo "legacy_format"
+```
+
+**Legacy format detected?** Use `AskUserQuestion`:
+- "Your profile uses legacy SSO format (8-hour sessions). Reconfigure for 90-day sessions?"
+- Options: "Yes, reconfigure with refresh tokens" / "No, keep current setup"
+
+If yes, guide through `aws configure sso` with `sso:account:access` scope.
 
 ## Step 3: Select Region
 
@@ -140,3 +157,4 @@ To undo: /bedrock:reset
 | No profiles | Guide to create one via SSO |
 | Permission denied | Contact administrator |
 | Can't write settings | Run: `mkdir -p ~/.claude` |
+| Sessions expire every 8 hours | Reconfigure with `sso:account:access` scope for refresh tokens |

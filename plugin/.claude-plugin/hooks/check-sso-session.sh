@@ -6,7 +6,9 @@
 # BEFORE the AI conversation starts, avoiding the chicken-and-egg problem where
 # expired credentials prevent the AI from helping troubleshoot.
 #
-# Output: JSON with additionalContext if session is expired/expiring
+# Also checks for refresh token configuration to warn about 8-hour vs 90-day sessions.
+#
+# Output: JSON with additionalContext if session is expired/expiring or misconfigured
 #
 
 set -euo pipefail
@@ -54,6 +56,31 @@ find_sso_cache() {
     done
 
     return 1
+}
+
+# Check if profile uses SSO Session format (has refresh tokens)
+check_has_refresh_tokens() {
+    local profile="$1"
+    local cache_file="$2"
+
+    # Check if the cache file has a refreshToken
+    if command -v jq &> /dev/null && [[ -f "$cache_file" ]]; then
+        if jq -e '.refreshToken' "$cache_file" &> /dev/null; then
+            echo "yes"
+            return 0
+        fi
+    fi
+
+    # Also check AWS config for sso_session format
+    if [[ -f ~/.aws/config ]]; then
+        # Check if profile references an sso_session (new format with refresh tokens)
+        if grep -A10 "\[profile $profile\]" ~/.aws/config 2>/dev/null | grep -q "sso_session"; then
+            echo "yes"
+            return 0
+        fi
+    fi
+
+    echo "no"
 }
 
 # Check session status from cache file
@@ -123,6 +150,9 @@ EOF
     # Check session status
     local status=$(check_session_status "$cache_file")
 
+    # Check for refresh tokens
+    local has_refresh=$(check_has_refresh_tokens "$profile" "$cache_file")
+
     case "$status" in
         expired)
             cat << EOF
@@ -143,12 +173,29 @@ EOF
 }
 EOF
             ;;
+        valid:*)
+            # Session is valid - but check if refresh tokens are missing
+            if [[ "$has_refresh" == "no" ]]; then
+                local minutes="${status#valid:}"
+                local hours=$((minutes / 60))
+                cat << EOF
+{
+  "hookSpecificOutput": {
+    "additionalContext": "TIP: Your SSO session is valid (~${hours}h remaining) but uses legacy format without refresh tokens.\n\nThis means you must re-authenticate every ~8 hours. To enable 90-day sessions:\n1. Run: aws configure sso\n2. When prompted for 'SSO registration scopes', enter: sso:account:access\n\nSee /bedrock for guided setup or SKILL.md for details."
+  }
+}
+EOF
+            else
+                # All good - valid session with refresh tokens
+                echo '{}'
+            fi
+            ;;
         jq_missing)
             # Can't check without jq, silently continue
             echo '{}'
             ;;
         *)
-            # Session is valid, no warning needed
+            # Unknown status, silently continue
             echo '{}'
             ;;
     esac
