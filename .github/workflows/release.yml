@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
@@ -40,7 +38,7 @@ jobs:
 
   release:
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -62,9 +60,29 @@ jobs:
         working-directory: plugin/scripts
         run: npm run build
 
+      - name: Calculate next version
+        id: version
+        run: |
+          # Get latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+
+          # Parse version numbers
+          VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          # Increment patch version
+          PATCH=$((PATCH + 1))
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
       - name: Create release artifact
         run: |
-          VERSION="${{ github.ref_name }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
           # Create a clean release directory
           mkdir -p release/plugin
@@ -105,25 +123,26 @@ jobs:
         id: notes
         run: |
           # Get previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
           if [ -n "$PREV_TAG" ]; then
-            echo "Generating notes from $PREV_TAG to ${{ github.ref_name }}"
-            NOTES=$(git log ${PREV_TAG}..${{ github.ref_name }} --pretty=format:"- %s" --no-merges)
+            echo "Generating notes from $PREV_TAG to HEAD"
+            NOTES=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s" --no-merges)
           else
-            echo "First release - using all commits"
+            echo "First release - using recent commits"
             NOTES=$(git log --pretty=format:"- %s" --no-merges -20)
           fi
 
           # Write to file for multiline support
           echo "$NOTES" > release_notes.txt
+          cat release_notes.txt
 
-      - name: Create GitHub Release
+      - name: Create tag and release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
           body_path: release_notes.txt
-          files: claude-code-bedrock-${{ github.ref_name }}.tar.gz
+          files: claude-code-bedrock-${{ steps.version.outputs.version }}.tar.gz
           draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: false
