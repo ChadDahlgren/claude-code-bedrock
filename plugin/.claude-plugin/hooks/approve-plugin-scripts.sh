@@ -42,6 +42,7 @@ is_allowed_command() {
         "which aws"*) return 0 ;;
         "which jq"*) return 0 ;;
         "jq --version"*) return 0 ;;
+        "jq "*) return 0 ;;
         "aws sts get-caller-identity"*) return 0 ;;
         "aws configure list-profiles"*) return 0 ;;
         "aws configure get "*) return 0 ;;

@@ -2,6 +2,7 @@
   "name": "bedrock",
   "description": "Configure Claude Code to use AWS Bedrock",
   "version": "1.0.0",
+  "hooks": "./hooks/hooks.json",
   "author": {
     "name": "Chad Dahlgren"
   },
