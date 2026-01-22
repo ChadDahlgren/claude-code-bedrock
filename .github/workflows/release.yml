@@ -70,10 +70,12 @@ jobs:
           mkdir -p release/plugin/scripts
           cp -r plugin/scripts/dist release/plugin/scripts/
           cp plugin/scripts/package.json release/plugin/scripts/
+          cp plugin/scripts/package-lock.json release/plugin/scripts/
 
           # Install production dependencies only
           cd release/plugin/scripts
           npm ci --omit=dev
+          rm package-lock.json  # Remove lockfile from release artifact
           cd ../../..
 
           # Copy marketplace config
