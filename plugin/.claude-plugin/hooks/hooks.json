@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "Setup": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '✓ Bedrock plugin installed! Run /bedrock:manage to configure AWS SSO.'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "",
