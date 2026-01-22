@@ -80,6 +80,25 @@ jobs:
           echo "New version: $NEW_VERSION"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Update version in manifest files
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_NUM="${VERSION#v}"  # Remove 'v' prefix for JSON files
+
+          echo "Updating manifest files to version ${VERSION_NUM}"
+
+          # Update plugin.json
+          sed -i 's/"version": "[^"]*"/"version": "'"${VERSION_NUM}"'"/' plugin/.claude-plugin/plugin.json
+
+          # Update package.json
+          sed -i 's/"version": "[^"]*"/"version": "'"${VERSION_NUM}"'"/' plugin/scripts/package.json
+
+          # Verify updates
+          echo "plugin.json version:"
+          grep '"version"' plugin/.claude-plugin/plugin.json
+          echo "package.json version:"
+          grep '"version"' plugin/scripts/package.json
+
       - name: Create release artifact
         run: |
           VERSION="${{ steps.version.outputs.version }}"

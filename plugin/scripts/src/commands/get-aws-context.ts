@@ -18,6 +18,9 @@ import { progress, progressStep } from '../lib/progress.js';
 interface ProfileInfo {
   name: string;
   region: string | null;
+  profileRegion: string | null;        // Original region from profile (before Bedrock discovery)
+  bedrockRegion: string | null;        // Region where Bedrock was found (may differ from profile)
+  regionMismatch: boolean;             // True if Bedrock found in different region than profile
   valid: boolean;
   identity: AwsIdentity | null;
   sessionExpires: string | null;       // Raw UTC timestamp
@@ -121,6 +124,9 @@ export function getAwsContext(): void {
     const info: ProfileInfo = {
       name,
       region,
+      profileRegion: region,           // Store the original profile region
+      bedrockRegion: null,             // Will be set when Bedrock is found
+      regionMismatch: false,           // Will be set if Bedrock is in different region
       valid: identity !== null,
       identity,
       sessionExpires: creds?.expiration || null,
@@ -143,8 +149,14 @@ export function getAwsContext(): void {
         if (preferredProfiles.length > 0) {
           info.bedrockAccess = true;
           info.inferenceProfiles = preferredProfiles;
-          if (!info.region) {
-            info.region = r; // Set region if we found Bedrock access
+          info.bedrockRegion = r;
+
+          // Track if Bedrock was found in a different region than the profile's default
+          if (info.profileRegion && info.profileRegion !== r) {
+            info.regionMismatch = true;
+            // Don't override region - let the user decide
+          } else if (!info.region) {
+            info.region = r; // Only set region if profile didn't have one
           }
           break;
         }

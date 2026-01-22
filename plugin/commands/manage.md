@@ -110,18 +110,40 @@ After user confirms, re-run `get-aws-context` to verify.
 ### Step 3: Check Bedrock Access
 
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js get-aws-context --check-bedrock --region=us-west-2
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js get-aws-context --check-bedrock
 ```
 
-**If `bedrockAccess: true`:**
+Note: Don't hardcode a region. The script will check the profile's configured region first, then try other Bedrock regions.
+
+**If `bedrockAccess: true` and `regionMismatch: false`:**
 - Show available `inferenceProfiles` (already filtered to prefer `global.` prefix)
 - Use `AskUserQuestion` to select model
 - Note: The script automatically prefers `global.` profiles for best availability
 
+**If `bedrockAccess: true` and `regionMismatch: true`:**
+
+⚠️ **IMPORTANT:** The profile has a region configured (`profileRegion`) but Bedrock was found in a different region (`bedrockRegion`). **Do not automatically use the different region.** Use `AskUserQuestion` to ask:
+
+```
+Region Mismatch Detected
+============================================
+
+Your AWS profile is configured for: <profileRegion>
+Bedrock Claude models were found in: <bedrockRegion>
+
+Which region would you like to use?
+```
+
+Options:
+- **Use <bedrockRegion>** - "Bedrock models are available here"
+- **Keep <profileRegion>** - "Use my profile's region (may need to request Bedrock access)"
+
+If user selects their profile region and Bedrock isn't available there, explain they may need to request access or change their profile's region manually.
+
 **If `bedrockAccess: false`:**
 - May need SSO login: `aws sso login --profile <profile>`
 - Or check IAM permissions
-- Try other regions
+- Use `AskUserQuestion` before trying other regions: "Bedrock wasn't found in <region>. Would you like to check other regions?"
 
 ### Step 4: Apply Configuration
 
