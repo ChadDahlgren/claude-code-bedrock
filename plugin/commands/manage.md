@@ -6,6 +6,8 @@ description: Configure and manage AWS Bedrock integration for Claude Code
 
 Manage AWS Bedrock configuration for Claude Code. Provides setup, status monitoring, authentication refresh, and configuration reset.
 
+**Shortcuts:** `/bedrock:status`, `/bedrock:refresh`, `/bedrock:mode`
+
 ## Step 1: Check Current State
 
 First, check if Bedrock is already configured:
@@ -58,7 +60,7 @@ Select an option:
 
 Options:
 - **Check Status** - "View configuration and run health checks"
-- **Thinking Mode** - "Adjust reasoning depth for different tasks"
+- **Mode** - "Adjust reasoning depth for different tasks"
 - **Refresh Auth** - "Re-authenticate your AWS SSO session"
 - **Reconfigure** - "Change profile, region, or model settings"
 - **Reset** - "Remove Bedrock config and use default API"
@@ -194,7 +196,7 @@ If issues found, offer to fix them:
 
 ---
 
-## Option: Thinking Mode
+## Option: Mode
 
 Adjust how deeply Claude reasons before responding. These settings control REASONING time - how long Claude deliberates. This is NOT context window or how much of the codebase Claude can see.
 
