@@ -3,6 +3,7 @@
 import { success, failure } from '../lib/output.js';
 import { applyBedrockConfig, removeBedrockConfig, getBedrockConfig, getSettingsPath } from '../lib/config.js';
 import { getCallerIdentity, listInferenceProfiles } from '../lib/aws.js';
+import { parseArgs, hasFlag, getValue } from '../lib/args.js';
 
 interface ApplyConfigResult {
   applied: boolean;
@@ -20,30 +21,14 @@ interface RemoveConfigResult {
   settingsPath: string;
 }
 
-function parseArgs(): { profile?: string; region?: string; model?: string; remove?: boolean } {
-  const args = process.argv.slice(3);
-  const result: { profile?: string; region?: string; model?: string; remove?: boolean } = {};
-
-  for (const arg of args) {
-    if (arg === '--remove') {
-      result.remove = true;
-    } else if (arg.startsWith('--profile=')) {
-      result.profile = arg.split('=')[1];
-    } else if (arg.startsWith('--region=')) {
-      result.region = arg.split('=')[1];
-    } else if (arg.startsWith('--model=')) {
-      result.model = arg.split('=')[1];
-    }
-  }
-
-  return result;
-}
+// Alternate regions to suggest on failure
+const ALTERNATE_REGIONS = ['us-west-2', 'us-east-1', 'eu-west-1'];
 
 export function applyConfig(): void {
   const args = parseArgs();
 
   // Handle remove
-  if (args.remove) {
+  if (hasFlag(args, 'remove')) {
     removeBedrockConfig();
     success<RemoveConfigResult>({
       removed: true,
@@ -52,36 +37,56 @@ export function applyConfig(): void {
     return;
   }
 
+  // Get values
+  const profile = getValue(args, 'profile');
+  const region = getValue(args, 'region');
+  const model = getValue(args, 'model');
+
   // Validate required args
-  if (!args.profile) {
+  if (!profile) {
     failure('Missing required argument: --profile=<profile-name>');
   }
-  if (!args.region) {
+  if (!region) {
     failure('Missing required argument: --region=<aws-region>');
   }
-  if (!args.model) {
+  if (!model) {
     failure('Missing required argument: --model=<model-id>');
   }
 
-  const { profile, region, model } = args as { profile: string; region: string; model: string };
-
   // Validate profile exists and has valid credentials
-  const identity = getCallerIdentity(profile);
+  const identity = getCallerIdentity(profile!);
   if (!identity) {
     failure(`Profile '${profile}' does not exist or has expired credentials. Run 'aws sso login --profile ${profile}' first.`);
   }
 
   // Validate Bedrock access
-  const inferenceProfiles = listInferenceProfiles(profile, region);
+  const inferenceProfiles = listInferenceProfiles(profile!, region!);
   if (inferenceProfiles.length === 0) {
-    failure(`Profile '${profile}' does not have Bedrock access in region '${region}'. Check IAM permissions.`);
+    // Check alternate regions and suggest them
+    const alternates = ALTERNATE_REGIONS.filter(r => r !== region);
+    const working: string[] = [];
+
+    for (const alt of alternates) {
+      if (listInferenceProfiles(profile!, alt).length > 0) {
+        working.push(alt);
+        if (working.length >= 2) break;
+      }
+    }
+
+    let msg = `Profile '${profile}' does not have Bedrock access in region '${region}'.`;
+    if (working.length > 0) {
+      msg += ` Try: ${working.join(' or ')}`;
+    } else {
+      msg += ' Check IAM permissions.';
+    }
+    failure(msg);
   }
 
   // Validate model exists
   const modelExists = inferenceProfiles.some(p =>
     p.profileId === model ||
-    p.profileId.includes(model) ||
-    p.profileName.toLowerCase().includes(model.toLowerCase())
+    p.profileId.includes(model!) ||
+    p.profileName.toLowerCase().includes(model!.toLowerCase())
   );
 
   if (!modelExists) {
@@ -90,11 +95,11 @@ export function applyConfig(): void {
   }
 
   // Apply configuration
-  applyBedrockConfig({ profile, region, model });
+  applyBedrockConfig({ profile: profile!, region: region!, model: model! });
 
   success<ApplyConfigResult>({
     applied: true,
-    config: { profile, region, model },
+    config: { profile: profile!, region: region!, model: model! },
     settingsPath: getSettingsPath(),
     requiresRestart: true
   });

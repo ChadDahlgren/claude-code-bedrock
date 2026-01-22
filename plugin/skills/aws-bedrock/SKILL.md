@@ -219,6 +219,19 @@ aws sso login --profile <profile>
 aws sso logout
 ```
 
+## Multi-Account Setup
+
+**Multiple AWS accounts?**
+1. Configure separate profiles: `aws configure sso` for each
+2. Switch accounts: `/bedrock:reset` then `/bedrock` with different profile
+3. Only one profile active at a time
+
+**AWS Organizations:**
+- Each account needs Bedrock enabled separately
+- IAM permissions required per account
+- Model access may vary by account
+- SSO provides unified login across accounts
+
 ## Resources
 
 - [AWS Bedrock](https://aws.amazon.com/bedrock/)

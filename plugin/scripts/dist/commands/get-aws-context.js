@@ -2,15 +2,25 @@
 import { success } from '../lib/output.js';
 import { listProfiles, getCallerIdentity, exportCredentials, getConfigValue, listInferenceProfiles } from '../lib/aws.js';
 import { getBedrockConfig } from '../lib/config.js';
+import { parseArgs, hasFlag, getValue } from '../lib/args.js';
+import { progress, progressStep } from '../lib/progress.js';
 // Bedrock regions to check
 const BEDROCK_REGIONS = ['us-west-2', 'us-east-1', 'eu-west-1', 'ap-northeast-1'];
+/**
+ * Filter inference profiles to only include Claude models
+ */
+function filterClaudeModels(profiles) {
+    return profiles.filter(p => p.profileId.includes('anthropic') ||
+        p.profileName.toLowerCase().includes('claude'));
+}
 export function getAwsContext() {
-    const args = process.argv.slice(3);
-    const checkBedrockFlag = args.includes('--check-bedrock');
-    const regionArg = args.find(a => a.startsWith('--region='));
-    const specificRegion = regionArg ? regionArg.split('=')[1] : null;
+    const args = parseArgs();
+    const checkBedrockFlag = hasFlag(args, 'check-bedrock');
+    const specificRegion = getValue(args, 'region') || null;
+    progress('Discovering AWS profiles...');
     const profiles = listProfiles();
     if (profiles.length === 0) {
+        progress('No profiles found.');
         success({
             profiles: [],
             validProfiles: [],
@@ -21,8 +31,11 @@ export function getAwsContext() {
         });
         return;
     }
+    progress(`Found ${profiles.length} profile(s).`);
     const profileInfos = [];
-    for (const name of profiles) {
+    for (let i = 0; i < profiles.length; i++) {
+        const name = profiles[i];
+        progressStep(i + 1, profiles.length, `Checking profile: ${name}`);
         const region = getConfigValue(name, 'region');
         const identity = getCallerIdentity(name);
         const creds = identity ? exportCredentials(name) : null;
@@ -37,12 +50,14 @@ export function getAwsContext() {
         };
         // Only check Bedrock if profile is valid and flag is set
         if (info.valid && checkBedrockFlag) {
+            progress(`  Checking Bedrock access...`);
             const regionsToCheck = specificRegion ? [specificRegion] : (region ? [region] : BEDROCK_REGIONS);
             for (const r of regionsToCheck) {
-                const inferenceProfiles = listInferenceProfiles(name, r);
-                if (inferenceProfiles.length > 0) {
+                const allProfiles = listInferenceProfiles(name, r);
+                const claudeProfiles = filterClaudeModels(allProfiles);
+                if (claudeProfiles.length > 0) {
                     info.bedrockAccess = true;
-                    info.inferenceProfiles = inferenceProfiles;
+                    info.inferenceProfiles = claudeProfiles;
                     if (!info.region) {
                         info.region = r; // Set region if we found Bedrock access
                     }
@@ -62,6 +77,7 @@ export function getAwsContext() {
     else if (validProfiles.length === 1) {
         recommended = validProfiles[0];
     }
+    progress('Done.');
     success({
         profiles: profileInfos,
         validProfiles,
