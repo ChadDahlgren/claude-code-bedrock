@@ -29,11 +29,12 @@ EOF
     exit 0
 }
 
-# Check if command is our TypeScript scripts
+# Check if command is our TypeScript scripts (must be in THIS plugin's directory)
 is_plugin_script() {
     local cmd="$1"
-    # Match: node <path>/scripts/dist/index.js <anything>
-    if [[ "$cmd" == "node "* ]] && [[ "$cmd" == *"/scripts/dist/index.js"* ]]; then
+    # Must start with "node " and contain our exact plugin path
+    # This prevents approving arbitrary scripts that happen to have similar names
+    if [[ "$cmd" == "node ${PLUGIN_ROOT}/scripts/dist/index.js"* ]]; then
         return 0
     fi
     return 1

@@ -18,6 +18,7 @@ export interface ReadSettingsResult {
 }
 /**
  * Read the current Claude settings with error context
+ * Warns to stderr if settings file is corrupted
  */
 export declare function readSettings(): ClaudeSettings;
 /**

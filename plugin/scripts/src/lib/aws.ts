@@ -28,6 +28,13 @@ export interface InferenceProfile {
   modelId: string;
 }
 
+// AWS API response structure for list-inference-profiles
+interface AwsInferenceProfileSummary {
+  inferenceProfileId: string;
+  inferenceProfileName: string;
+  models?: Array<{ modelArn?: string }>;
+}
+
 /**
  * List all configured AWS profiles
  */
@@ -112,7 +119,7 @@ export function listInferenceProfiles(profile: string, region: string): Inferenc
   }
   try {
     const data = JSON.parse(result.stdout);
-    return (data.inferenceProfileSummaries || []).map((p: any) => ({
+    return (data.inferenceProfileSummaries || []).map((p: AwsInferenceProfileSummary) => ({
       profileId: p.inferenceProfileId,
       profileName: p.inferenceProfileName,
       modelId: p.models?.[0]?.modelArn?.split('/').pop() || 'unknown'

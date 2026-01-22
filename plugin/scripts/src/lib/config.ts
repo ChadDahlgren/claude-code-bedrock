@@ -15,6 +15,7 @@ import {
   type InferencePreset,
 } from './constants.js';
 import { createConfigError, type AwsError } from './errors.js';
+import { debug } from './progress.js';
 
 export interface BedrockConfig {
   profile: string | null;
@@ -40,10 +41,54 @@ const SETTINGS_BACKUP_PATH = PATHS.SETTINGS_BACKUP;
 const SETTINGS_TEMP_PATH = PATHS.SETTINGS_TEMP;
 
 /**
+ * Basic schema validation for settings
+ * Returns null if valid, error message if invalid
+ */
+function validateSettingsSchema(settings: unknown): string | null {
+  if (typeof settings !== 'object' || settings === null) {
+    return 'Settings must be an object';
+  }
+
+  const obj = settings as Record<string, unknown>;
+
+  // env must be an object if present
+  if (obj.env !== undefined) {
+    if (typeof obj.env !== 'object' || obj.env === null || Array.isArray(obj.env)) {
+      return 'settings.env must be an object';
+    }
+    // All env values must be strings
+    for (const [key, value] of Object.entries(obj.env as Record<string, unknown>)) {
+      if (typeof value !== 'string') {
+        return `settings.env.${key} must be a string, got ${typeof value}`;
+      }
+    }
+  }
+
+  // awsAuthRefresh must be a string if present
+  if (obj.awsAuthRefresh !== undefined && typeof obj.awsAuthRefresh !== 'string') {
+    return 'settings.awsAuthRefresh must be a string';
+  }
+
+  // model must be a string if present
+  if (obj.model !== undefined && typeof obj.model !== 'string') {
+    return 'settings.model must be a string';
+  }
+
+  return null;
+}
+
+/**
  * Read the current Claude settings with error context
+ * Warns to stderr if settings file is corrupted
  */
 export function readSettings(): ClaudeSettings {
   const result = readSettingsWithContext();
+
+  if (result.wasCorrupted) {
+    debug('WARNING: Settings file was corrupted. Using empty settings.');
+    debug(`Backup may exist at: ${SETTINGS_BACKUP_PATH}`);
+  }
+
   return result.settings;
 }
 
@@ -63,8 +108,20 @@ export function readSettingsWithContext(): ReadSettingsResult {
     }
 
     try {
-      const settings = JSON.parse(content);
-      return { settings };
+      const parsed = JSON.parse(content);
+
+      // Validate schema
+      const schemaError = validateSettingsSchema(parsed);
+      if (schemaError) {
+        const error = createConfigError('corrupted', schemaError);
+        return {
+          settings: {},
+          error,
+          wasCorrupted: true
+        };
+      }
+
+      return { settings: parsed as ClaudeSettings };
     } catch (parseError) {
       // JSON is corrupted - return empty but flag the error
       const error = createConfigError('corrupted', `Invalid JSON in settings file: ${parseError}`);
