@@ -88,9 +88,11 @@ check_session_via_cli() {
 
     # Strip fractional seconds (.123) and normalize timezone
     # Convert "2024-01-15T14:30:45.123Z" -> "2024-01-15T14:30:45"
-    clean_date="${expiration%%.*}"  # Strip .123Z or .123+00:00
+    # Handle formats: .123Z, .123+00:00, .123-08:00, Z, +00:00, -08:00
+    clean_date="${expiration%%.*}"  # Strip .123Z or .123+00:00 or .123-08:00
     clean_date="${clean_date%%Z}"   # Strip trailing Z if no fractional
     clean_date="${clean_date%%+*}"  # Strip +00:00 timezone
+    clean_date="${clean_date%%-[0-9][0-9]:*}"  # Strip -08:00 style timezone
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS: Parse as UTC (-u flag) since AWS times are UTC
@@ -173,11 +175,16 @@ EOF
             if [[ "$has_sso_session" == "no" ]]; then
                 local minutes="${status#valid:}"
                 if [[ "$minutes" != "unknown" ]]; then
-                    local hours=$((minutes / 60))
+                    local time_remaining
+                    if [[ $minutes -lt 60 ]]; then
+                        time_remaining="${minutes}m"
+                    else
+                        time_remaining="$((minutes / 60))h"
+                    fi
                     cat << EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "TIP: Your SSO session is valid (~${hours}h remaining) but uses legacy format.\n\nThis means you must re-authenticate every ~8 hours. To enable 90-day sessions:\n1. Run: aws configure sso\n2. When prompted for 'SSO registration scopes', enter: sso:account:access\n\nSee /bedrock for guided setup."
+    "additionalContext": "TIP: Your SSO session is valid (~${time_remaining} remaining) but uses legacy format.\n\nThis means you must re-authenticate every ~8 hours. To enable 90-day sessions:\n1. Run: aws configure sso\n2. When prompted for 'SSO registration scopes', enter: sso:account:access\n\nSee /bedrock for guided setup."
   }
 }
 EOF
