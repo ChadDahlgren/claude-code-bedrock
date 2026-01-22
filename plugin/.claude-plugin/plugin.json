@@ -1,7 +1,7 @@
 {
   "name": "bedrock",
   "description": "AWS Bedrock integration for Claude Code. Run /bedrock:manage to configure.",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "hooks": "./.claude-plugin/hooks/hooks.json",
   "author": {
     "name": "Chad Dahlgren"

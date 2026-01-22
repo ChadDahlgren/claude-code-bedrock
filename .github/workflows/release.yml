@@ -93,11 +93,33 @@ jobs:
           # Update package.json
           sed -i 's/"version": "[^"]*"/"version": "'"${VERSION_NUM}"'"/' plugin/scripts/package.json
 
+          # Update marketplace.json (has two version fields)
+          sed -i 's/"version": "[^"]*"/"version": "'"${VERSION_NUM}"'"/g' .claude-plugin/marketplace.json
+
           # Verify updates
           echo "plugin.json version:"
           grep '"version"' plugin/.claude-plugin/plugin.json
           echo "package.json version:"
           grep '"version"' plugin/scripts/package.json
+          echo "marketplace.json versions:"
+          grep '"version"' .claude-plugin/marketplace.json
+
+      - name: Commit version updates to repo
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add plugin/.claude-plugin/plugin.json plugin/scripts/package.json .claude-plugin/marketplace.json
+
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No version changes to commit"
+          else
+            git commit -m "chore: bump version to ${VERSION} [skip ci]"
+            git push
+          fi
 
       - name: Create release artifact
         run: |
