@@ -27,17 +27,19 @@ export function testBedrock() {
     };
     // Check 1: Credentials are valid
     if (profile) {
-        const identity = getCallerIdentity(profile);
-        if (identity) {
+        const identityResult = getCallerIdentity(profile);
+        if (identityResult.identity) {
             checks.credentials = {
                 passed: true,
-                message: `Authenticated as ${identity.arn}`
+                message: `Authenticated as ${identityResult.identity.arn}`
             };
         }
         else {
+            // Use error context for better message
+            const errorMsg = identityResult.error?.suggestion || `Run: aws sso login --profile ${profile}`;
             checks.credentials = {
                 passed: false,
-                message: `Credentials expired. Run: aws sso login --profile ${profile}`
+                message: identityResult.error?.message || `Credentials expired. ${errorMsg}`
             };
         }
     }

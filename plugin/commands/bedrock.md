@@ -1,146 +1,135 @@
 ---
-description: Configure Claude Code to use AWS Bedrock
+description: Configure and manage AWS Bedrock integration for Claude Code
 ---
 
-# Bedrock Setup
+# /bedrock
+
+Manage AWS Bedrock configuration for Claude Code. Provides setup, status monitoring, authentication refresh, and configuration reset.
+
+## Step 1: Check Current State
+
+First, check if Bedrock is already configured:
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js test-bedrock
+```
+
+## Step 2: Show Menu
+
+Use `AskUserQuestion` to present the menu. Adapt based on current state.
+
+**If NOT configured (`configured: false`):**
+
+```
+AWS Bedrock
+============================================
+
+Status: Not configured
+
+Select an option:
+```
+
+Options:
+- **Setup Bedrock** - "Configure AWS Bedrock for Claude API access"
+- **Check Status** - "View configuration and run health checks"
+
+**If configured (`configured: true`):**
+
+To get session expiration, also run:
+```bash
+aws configure export-credentials --profile <profile> --format process 2>/dev/null | jq -r '.Expiration // "unknown"'
+```
+
+Display with expiration info:
+```
+AWS Bedrock
+============================================
+
+  Profile:  <profile>
+  Region:   <region>
+  Model:    <model>
+  Auth:     <✓ valid | ✗ expired>
+  Expires:  <expiration time or "~Xh remaining">
+
+Tip: Use /model to quickly switch between available models
+
+Select an option:
+```
+
+Options:
+- **Check Status** - "View configuration and run health checks"
+- **Thinking Mode** - "Adjust reasoning depth for different tasks"
+- **Refresh Auth** - "Re-authenticate your AWS SSO session"
+- **Reconfigure** - "Change profile, region, or model settings"
+- **Reset** - "Remove Bedrock config and use default API"
+
+---
+
+## Option: Setup Bedrock
 
 Configure Claude Code to use AWS Bedrock for Claude API access.
 
-## Step 1: Check Prerequisites
+### Step 1: Check Prerequisites
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js check-prerequisites
 ```
 
-**Response format:**
-```json
-{
-  "success": true,
-  "data": {
-    "aws_cli": { "installed": true, "version": "..." },
-    "node": { "installed": true, "version": "..." },
-    "ready": true,
-    "missing": []
-  }
-}
-```
-
 **If `ready: false`:**
-- Show which tools are missing from the `missing` array
+- Show which tools are missing
 - Use `AskUserQuestion`: "Install missing tools with Homebrew?"
-- If yes: `brew install awscli` (for aws-cli)
+- If yes: `brew install awscli`
 
-## Step 2: Get AWS Context
+### Step 2: Get AWS Context
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js get-aws-context
 ```
 
-**Response format:**
-```json
-{
-  "success": true,
-  "data": {
-    "profiles": [...],
-    "validProfiles": ["profile1", "profile2"],
-    "bedrockProfiles": [],
-    "recommended": "profile1",
-    "currentConfig": null,
-    "needsSsoSetup": false
-  }
-}
-```
-
 **If `needsSsoSetup: true` (no valid profiles):**
-- Collect SSO info via `AskUserQuestion`:
-  - SSO start URL (e.g., `https://company.awsapps.com/start`)
-  - SSO region (e.g., `us-west-2`)
-  - Profile name (e.g., `work-dev`)
-- Tell user to run in their terminal:
+
+Tell user to run in their terminal:
 
 ```
 Run: aws configure sso
 
 Enter these values when prompted:
-  SSO session name:        {profile_name}
-  SSO start URL:           {sso_url}
-  SSO region:              {sso_region}
+  SSO session name:        <profile_name>
+  SSO start URL:           <sso_url>
+  SSO region:              <sso_region>
   SSO registration scopes: sso:account:access   ← IMPORTANT for 90-day sessions!
 
 Complete browser auth, then return here.
 ```
 
-- After user confirms, re-run `get-aws-context` to verify
+After user confirms, re-run `get-aws-context` to verify.
 
-**If `recommended` exists:**
-- Use `AskUserQuestion`: "Use profile '{recommended}'?"
-- Options: "Yes, use {recommended}" / "Select different profile" / "Configure new profile"
+**If profiles exist:**
+- Use `AskUserQuestion` to select profile
+- Recommend the `recommended` profile if available
 
-**If `validProfiles` has multiple options and user wants to select:**
-- Show list with `AskUserQuestion`
-
-**If user selects "Configure new profile":**
-- Collect SSO info via `AskUserQuestion` (all in one prompt if possible):
-  - SSO start URL (e.g., `https://company.awsapps.com/start`)
-  - SSO region (e.g., `us-west-2`)
-  - Profile name (e.g., `work-dev`)
-- Tell user to run in their terminal:
-
-```
-Run: aws configure sso
-
-Enter these values when prompted:
-  SSO session name:        {profile_name}
-  SSO start URL:           {sso_url}
-  SSO region:              {sso_region}
-  SSO registration scopes: sso:account:access   ← IMPORTANT for 90-day sessions!
-
-Complete browser auth, then return here.
-```
-
-- After user confirms, re-run `get-aws-context` to verify the new profile
-
-## Step 3: Check Bedrock Access
-
-Once profile is selected, check Bedrock access:
+### Step 3: Check Bedrock Access
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js get-aws-context --check-bedrock --region=us-west-2
 ```
 
-**If the selected profile shows `bedrockAccess: true`:**
-- Show available `inferenceProfiles` for model selection
-- Use `AskUserQuestion` to select model (recommend `global.anthropic.claude-opus-4-5-*`)
+**If `bedrockAccess: true`:**
+- Show available `inferenceProfiles`
+- Use `AskUserQuestion` to select model
 
 **If `bedrockAccess: false`:**
-- May need SSO login first: `aws sso login --profile <profile>`
+- May need SSO login: `aws sso login --profile <profile>`
 - Or check IAM permissions
-- Try other regions if needed: us-east-1, eu-west-1, ap-northeast-1
+- Try other regions
 
-## Step 4: Apply Configuration
+### Step 4: Apply Configuration
 
 ```bash
 node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js apply-config --profile=<profile> --region=<region> --model=<model-id>
 ```
 
-**Response format:**
-```json
-{
-  "success": true,
-  "data": {
-    "applied": true,
-    "config": { "profile": "...", "region": "...", "model": "..." },
-    "settingsPath": "~/.claude/settings.json",
-    "requiresRestart": true
-  }
-}
-```
-
-**If `success: false`:**
-- Show the error message
-- Common issues: expired credentials, missing Bedrock access, invalid model
-
-## Step 5: Done
+### Step 5: Done
 
 ```
 ✓ AWS Bedrock configured
@@ -151,16 +140,210 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js apply-config --profile=<profile
 
 ⚠ RESTART REQUIRED
   Exit and restart Claude Code for changes to take effect.
+```
 
-To check status: /bedrock:status
-To undo: /bedrock:reset
+---
 
+## Option: Check Status
+
+View current configuration and run comprehensive health checks.
+
+### Run Diagnostics
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js check-prerequisites
+```
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js test-bedrock
+```
+
+### Display Results
+
+```
+Bedrock Status
+============================================
+
+  Profile:  <profile>
+  Region:   <region>
+  Model:    <model>
+
+System
+  [OK] AWS CLI installed (<version>)
+  [OK] Node installed (<version>)
+
+Authentication
+  [OK/FAIL] <credentials.message>
+
+Access
+  [OK/FAIL] <bedrockAccess.message>
+  [OK/FAIL] <modelAvailable.message>
+
+Status: <All checks passed | X issue(s) detected>
+```
+
+### Offer Fixes
+
+If issues found, offer to fix them:
+
+| Issue | Offer |
+|-------|-------|
+| `credentials.passed: false` | "Re-authenticate AWS SSO?" |
+| `bedrockAccess.passed: false` | "Try different region?" or check IAM |
+| `modelAvailable.passed: false` | "Model changed. Reconfigure?" |
+
+---
+
+## Option: Thinking Mode
+
+Adjust how deeply Claude reasons before responding. These settings control REASONING time - how long Claude deliberates. This is NOT context window or how much of the codebase Claude can see.
+
+### Step 1: Get Current Config
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js inference-config
+```
+
+### Step 2: Show Settings
+
+Use `AskUserQuestion` to present the presets:
+
+```
+Thinking Mode
+============================================
+
+These settings control REASONING time - how long Claude
+deliberates before responding. This is NOT context window
+or how much of your codebase Claude can see.
+
+Current: <current.preset> (Reasoning: <thinkingTokens> | Output: <outputTokens>)
+
+Select a preset:
+```
+
+Options (from `presets` array):
+- **Balanced (Recommended)** - "Solid reasoning without overthinking. Reasoning: 8192 | Output: 8192"
+- **Focused** - "Quick deliberation. Best for routine tasks. ⚠ May not fully analyze complex tradeoffs. Reasoning: 4096 | Output: 4096"
+- **Thorough** - "Extended deliberation for architectural decisions. ⚠ May over-engineer straightforward problems. Reasoning: 16384 | Output: 16384"
+- **Custom** - "Specify your own values (4096-16384)"
+
+### Step 3: Apply Configuration
+
+**If preset selected (focused, balanced, thorough):**
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js inference-config --preset=<preset>
+```
+
+**If custom selected:**
+
+Use `AskUserQuestion` to get custom values:
+- "Reasoning tokens (4096-16384)?"
+- "Output tokens (4096-16384)?"
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js inference-config --preset=custom --thinking=<value> --output=<value>
+```
+
+### Step 4: Done
+
+```
+✓ Thinking mode updated
+
+  Mode:      <preset>
+  Reasoning: <thinkingTokens>
+  Output:    <outputTokens>
+
+⚠ RESTART REQUIRED
+  Exit and restart Claude Code for changes to take effect.
+```
+
+---
+
+## Option: Refresh Auth
+
+Re-authenticate the AWS SSO session.
+
+### Confirm
+
+Use `AskUserQuestion`:
+- "Re-authenticate AWS Bedrock? This will open your browser."
+- Options: "Yes, open browser" / "Cancel"
+
+### Run SSO Login
+
+```bash
+aws sso login --profile <profile>
+```
+
+**Note:** Opens browser for user interaction.
+
+### Verify
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js test-bedrock
+```
+
+**Success:**
+```
+✓ Authentication successful
+
+Your SSO session is now active.
+```
+
+**Failure:**
+```
+✗ Authentication may not have completed
+
+Return to /bedrock and try again, or check Status for details.
+```
+
+---
+
+## Option: Reconfigure
+
+Same flow as Setup, but pre-populated with current values.
+
+---
+
+## Option: Reset
+
+Remove AWS Bedrock configuration and return to the default Anthropic API.
+
+### Confirm
+
+Use `AskUserQuestion`:
+- "Remove AWS Bedrock configuration? This will switch back to the default Anthropic API."
+- Options: "Yes, reset" / "Cancel"
+
+### Remove Configuration
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/dist/index.js apply-config --remove
+```
+
+### Done
+
+```
+✓ Bedrock configuration removed
+
+Claude Code will now use the default Anthropic API.
+
+⚠ RESTART REQUIRED
+  Exit and restart Claude Code for changes to take effect.
+```
+
+---
+
+## Manual Recovery
+
+**Include when issues are detected or user requests help:**
+
+```
 ────────────────────────────────────────────
 Manual Recovery (if Claude becomes unresponsive)
 
-If Bedrock is misconfigured and Claude can't make API calls,
-you won't be able to use /bedrock:reset. To manually fix:
-
+If you can't use Claude commands due to API errors:
 1. Edit ~/.claude/settings.json
 2. Delete these keys from "env":
    CLAUDE_CODE_USE_BEDROCK, AWS_PROFILE, AWS_REGION, ANTHROPIC_MODEL
@@ -168,12 +351,15 @@ you won't be able to use /bedrock:reset. To manually fix:
 4. Restart Claude Code
 ```
 
-## Error Handling
+---
+
+## Error Reference
 
 | Error | Fix |
 |-------|-----|
 | `ready: false` | Install missing tools (aws-cli) |
 | `needsSsoSetup: true` | Run `aws configure sso` in terminal |
-| `bedrockAccess: false` | Run `aws sso login` or check IAM permissions |
-| `success: false` on apply | Check error message, verify profile/region/model |
+| `credentials.passed: false` | Select "Refresh Auth" option |
+| `bedrockAccess.passed: false` | Check IAM permissions or try different region |
+| `modelAvailable.passed: false` | Select "Reconfigure" to pick new model |
 | Sessions expire quickly | Reconfigure SSO with `sso:account:access` scope |

@@ -7,6 +7,7 @@ import {
   exportCredentials,
   getConfigValue,
   listInferenceProfiles,
+  getBedrockRegions,
   type AwsIdentity,
   type InferenceProfile
 } from '../lib/aws.js';
@@ -37,8 +38,7 @@ interface AwsContextResult {
   needsSsoSetup: boolean;
 }
 
-// Bedrock regions to check
-const BEDROCK_REGIONS = ['us-west-2', 'us-east-1', 'eu-west-1', 'ap-northeast-1'];
+// Bedrock regions are now fetched dynamically from aws.ts
 
 /**
  * Filter inference profiles to only include Claude models
@@ -79,7 +79,8 @@ export function getAwsContext(): void {
     progressStep(i + 1, profiles.length, `Checking profile: ${name}`);
 
     const region = getConfigValue(name, 'region');
-    const identity = getCallerIdentity(name);
+    const identityResult = getCallerIdentity(name);
+    const identity = identityResult.identity;
     const creds = identity ? exportCredentials(name) : null;
 
     const info: ProfileInfo = {
@@ -95,7 +96,8 @@ export function getAwsContext(): void {
     // Only check Bedrock if profile is valid and flag is set
     if (info.valid && checkBedrockFlag) {
       progress(`  Checking Bedrock access...`);
-      const regionsToCheck = specificRegion ? [specificRegion] : (region ? [region] : BEDROCK_REGIONS);
+      // Use dynamic regions, prioritizing profile's default region
+      const regionsToCheck = specificRegion ? [specificRegion] : getBedrockRegions(region);
 
       for (const r of regionsToCheck) {
         const allProfiles = listInferenceProfiles(name, r);

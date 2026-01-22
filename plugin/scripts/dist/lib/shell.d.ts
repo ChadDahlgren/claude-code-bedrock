@@ -1,6 +1,8 @@
+import { type AwsError } from './errors.js';
 export interface ExecResult {
     stdout: string;
     success: boolean;
+    error?: AwsError;
 }
 /**
  * Execute a command safely using execFileSync (immune to shell injection)
@@ -11,7 +13,11 @@ export declare function execSafe(cmd: string, args: string[]): ExecResult;
  * Execute AWS CLI command safely
  */
 export declare function awsCli(args: string[]): ExecResult;
+export interface InteractiveResult {
+    success: boolean;
+    error?: AwsError;
+}
 /**
  * Execute AWS CLI with inherited stdio (for interactive commands like sso login)
  */
-export declare function awsCliInteractive(args: string[]): boolean;
+export declare function awsCliInteractive(args: string[]): InteractiveResult;

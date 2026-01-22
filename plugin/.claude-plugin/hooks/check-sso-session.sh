@@ -155,7 +155,7 @@ EOF
             cat << EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "WARNING: Your AWS SSO session is expired or invalid. Claude Code cannot connect to Bedrock.\n\nTo fix, run: aws sso login --profile $profile\n\nOr use: /bedrock:refresh"
+    "additionalContext": "WARNING: Your AWS SSO session is expired or invalid. Claude Code cannot connect to Bedrock.\n\nTo fix, run: /bedrock and select 'Refresh Auth'\n\nOr manually: aws sso login --profile $profile"
   }
 }
 EOF
@@ -165,7 +165,7 @@ EOF
             cat << EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "NOTE: Your AWS SSO session expires in $minutes minutes. Consider refreshing soon with: /bedrock:refresh"
+    "additionalContext": "NOTE: Your AWS SSO session expires in $minutes minutes. Run /bedrock and select 'Refresh Auth' to extend."
   }
 }
 EOF
@@ -184,7 +184,7 @@ EOF
                     cat << EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "TIP: Your SSO session is valid (~${time_remaining} remaining) but uses legacy format.\n\nThis means you must re-authenticate every ~8 hours. To enable 90-day sessions:\n1. Run: aws configure sso\n2. When prompted for 'SSO registration scopes', enter: sso:account:access\n\nSee /bedrock for guided setup."
+    "additionalContext": "TIP: Your SSO session is valid (~${time_remaining} remaining) but uses legacy format (8-hour sessions).\n\nTo enable 90-day sessions, run /bedrock and select 'Reconfigure', then add scope: sso:account:access"
   }
 }
 EOF
@@ -193,7 +193,7 @@ EOF
                     cat << EOF
 {
   "hookSpecificOutput": {
-    "additionalContext": "TIP: Your SSO profile uses legacy format without refresh tokens.\n\nThis means you must re-authenticate every ~8 hours. To enable 90-day sessions:\n1. Run: aws configure sso\n2. When prompted for 'SSO registration scopes', enter: sso:account:access"
+    "additionalContext": "TIP: Your SSO profile uses legacy format (8-hour sessions).\n\nTo enable 90-day sessions, run /bedrock and select 'Reconfigure', then add scope: sso:account:access"
   }
 }
 EOF

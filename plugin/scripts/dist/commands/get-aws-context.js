@@ -1,11 +1,10 @@
 // Get AWS context: profiles, validity, Bedrock access
 import { success } from '../lib/output.js';
-import { listProfiles, getCallerIdentity, exportCredentials, getConfigValue, listInferenceProfiles } from '../lib/aws.js';
+import { listProfiles, getCallerIdentity, exportCredentials, getConfigValue, listInferenceProfiles, getBedrockRegions } from '../lib/aws.js';
 import { getBedrockConfig } from '../lib/config.js';
 import { parseArgs, hasFlag, getValue } from '../lib/args.js';
 import { progress, progressStep } from '../lib/progress.js';
-// Bedrock regions to check
-const BEDROCK_REGIONS = ['us-west-2', 'us-east-1', 'eu-west-1', 'ap-northeast-1'];
+// Bedrock regions are now fetched dynamically from aws.ts
 /**
  * Filter inference profiles to only include Claude models
  */
@@ -37,7 +36,8 @@ export function getAwsContext() {
         const name = profiles[i];
         progressStep(i + 1, profiles.length, `Checking profile: ${name}`);
         const region = getConfigValue(name, 'region');
-        const identity = getCallerIdentity(name);
+        const identityResult = getCallerIdentity(name);
+        const identity = identityResult.identity;
         const creds = identity ? exportCredentials(name) : null;
         const info = {
             name,
@@ -51,7 +51,8 @@ export function getAwsContext() {
         // Only check Bedrock if profile is valid and flag is set
         if (info.valid && checkBedrockFlag) {
             progress(`  Checking Bedrock access...`);
-            const regionsToCheck = specificRegion ? [specificRegion] : (region ? [region] : BEDROCK_REGIONS);
+            // Use dynamic regions, prioritizing profile's default region
+            const regionsToCheck = specificRegion ? [specificRegion] : getBedrockRegions(region);
             for (const r of regionsToCheck) {
                 const allProfiles = listInferenceProfiles(name, r);
                 const claudeProfiles = filterClaudeModels(allProfiles);

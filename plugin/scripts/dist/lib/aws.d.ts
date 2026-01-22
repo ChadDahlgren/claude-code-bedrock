@@ -1,3 +1,4 @@
+import { type AwsError } from './errors.js';
 export interface AwsProfile {
     name: string;
     region?: string;
@@ -22,10 +23,14 @@ export interface InferenceProfile {
  * List all configured AWS profiles
  */
 export declare function listProfiles(): string[];
+export interface IdentityResult {
+    identity: AwsIdentity | null;
+    error?: AwsError;
+}
 /**
  * Get the caller identity for a profile (validates credentials work)
  */
-export declare function getCallerIdentity(profile: string): AwsIdentity | null;
+export declare function getCallerIdentity(profile: string): IdentityResult;
 /**
  * Export credentials for a profile (checks if session is valid)
  */
@@ -42,7 +47,20 @@ export declare function listInferenceProfiles(profile: string, region: string): 
  * Check if profile has Bedrock access in a region
  */
 export declare function hasBedrockAccess(profile: string, region: string): boolean;
+export interface SsoLoginResult {
+    success: boolean;
+    error?: AwsError;
+}
 /**
  * Run SSO login for a profile (returns success/failure, user sees browser)
  */
-export declare function ssoLogin(profile: string): boolean;
+export declare function ssoLogin(profile: string): SsoLoginResult;
+/**
+ * Get list of Bedrock regions to check, prioritized by user's profile region
+ */
+export declare function getBedrockRegions(profileDefaultRegion?: string | null): string[];
+/**
+ * Find regions where the profile has Bedrock access with Claude models
+ * Returns up to maxResults regions to avoid long waits
+ */
+export declare function findBedrockRegions(profile: string, profileDefaultRegion?: string | null, maxResults?: number): string[];

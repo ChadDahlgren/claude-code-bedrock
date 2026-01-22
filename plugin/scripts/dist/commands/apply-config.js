@@ -1,10 +1,9 @@
 // Apply Bedrock configuration to Claude settings
 import { success, failure } from '../lib/output.js';
 import { applyBedrockConfig, removeBedrockConfig, getSettingsPath } from '../lib/config.js';
-import { getCallerIdentity, listInferenceProfiles } from '../lib/aws.js';
+import { getCallerIdentity, listInferenceProfiles, findBedrockRegions } from '../lib/aws.js';
 import { parseArgs, hasFlag, getValue } from '../lib/args.js';
-// Alternate regions to suggest on failure
-const ALTERNATE_REGIONS = ['us-west-2', 'us-east-1', 'eu-west-1'];
+// Alternate regions are now fetched dynamically from aws.ts
 export function applyConfig() {
     const args = parseArgs();
     // Handle remove
@@ -31,29 +30,24 @@ export function applyConfig() {
         failure('Missing required argument: --model=<model-id>');
     }
     // Validate profile exists and has valid credentials
-    const identity = getCallerIdentity(profile);
-    if (!identity) {
-        failure(`Profile '${profile}' does not exist or has expired credentials. Run 'aws sso login --profile ${profile}' first.`);
+    const identityResult = getCallerIdentity(profile);
+    if (!identityResult.identity) {
+        const errorMsg = identityResult.error
+            ? `${identityResult.error.message}. ${identityResult.error.suggestion || ''}`
+            : `Profile '${profile}' does not exist or has expired credentials. Run 'aws sso login --profile ${profile}' first.`;
+        failure(errorMsg.trim());
     }
     // Validate Bedrock access
     const inferenceProfiles = listInferenceProfiles(profile, region);
     if (inferenceProfiles.length === 0) {
-        // Check alternate regions and suggest them
-        const alternates = ALTERNATE_REGIONS.filter(r => r !== region);
-        const working = [];
-        for (const alt of alternates) {
-            if (listInferenceProfiles(profile, alt).length > 0) {
-                working.push(alt);
-                if (working.length >= 2)
-                    break;
-            }
-        }
+        // Find working regions dynamically
+        const workingRegions = findBedrockRegions(profile, region, 2);
         let msg = `Profile '${profile}' does not have Bedrock access in region '${region}'.`;
-        if (working.length > 0) {
-            msg += ` Try: ${working.join(' or ')}`;
+        if (workingRegions.length > 0) {
+            msg += ` Try: ${workingRegions.join(' or ')}`;
         }
         else {
-            msg += ' Check IAM permissions.';
+            msg += ' Check IAM permissions for bedrock:ListInferenceProfiles.';
         }
         failure(msg);
     }

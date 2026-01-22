@@ -1,8 +1,20 @@
 // Settings file helpers
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { homedir } from 'os';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync, unlinkSync, copyFileSync } from 'fs';
+import { dirname, join } from 'path';
+import {
+  ENV_KEYS,
+  ENV_VALUES,
+  PATHS,
+  PERMISSIONS,
+  INFERENCE_PRESETS,
+  DEFAULT_INFERENCE_PRESET,
+  INFERENCE_TOKEN_RANGE,
+  type InferencePresetName,
+  type StandardPresetName,
+  type InferencePreset,
+} from './constants.js';
+import { createConfigError, type AwsError } from './errors.js';
 
 export interface BedrockConfig {
   profile: string | null;
@@ -17,37 +29,146 @@ export interface ClaudeSettings {
   [key: string]: unknown;
 }
 
-const SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
+export interface ReadSettingsResult {
+  settings: ClaudeSettings;
+  error?: AwsError;
+  wasCorrupted?: boolean;
+}
+
+const SETTINGS_PATH = PATHS.SETTINGS_FILE;
+const SETTINGS_BACKUP_PATH = PATHS.SETTINGS_BACKUP;
+const SETTINGS_TEMP_PATH = PATHS.SETTINGS_TEMP;
 
 /**
- * Read the current Claude settings
+ * Read the current Claude settings with error context
  */
 export function readSettings(): ClaudeSettings {
+  const result = readSettingsWithContext();
+  return result.settings;
+}
+
+/**
+ * Read settings with detailed error context
+ */
+export function readSettingsWithContext(): ReadSettingsResult {
   try {
     if (!existsSync(SETTINGS_PATH)) {
-      return {};
+      return { settings: {} };
     }
     const content = readFileSync(SETTINGS_PATH, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return {};
+
+    // Check for empty file
+    if (!content.trim()) {
+      return { settings: {} };
+    }
+
+    try {
+      const settings = JSON.parse(content);
+      return { settings };
+    } catch (parseError) {
+      // JSON is corrupted - return empty but flag the error
+      const error = createConfigError('corrupted', `Invalid JSON in settings file: ${parseError}`);
+      return {
+        settings: {},
+        error,
+        wasCorrupted: true
+      };
+    }
+  } catch (readError) {
+    // File read error (permissions, etc.)
+    return {
+      settings: {},
+      error: createConfigError('corrupted', `Cannot read settings file: ${readError}`)
+    };
   }
 }
 
 /**
+ * Write settings atomically using temp file + rename pattern
+ * This prevents corruption from interrupted writes or race conditions
+ */
+function writeSettingsAtomic(settings: ClaudeSettings, createBackup: boolean = true): void {
+  const dir = dirname(SETTINGS_PATH);
+
+  // Ensure directory exists with secure permissions
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { mode: PERMISSIONS.DIRECTORY, recursive: true });
+  }
+
+  // Create backup of existing file before writing
+  if (createBackup && existsSync(SETTINGS_PATH)) {
+    try {
+      copyFileSync(SETTINGS_PATH, SETTINGS_BACKUP_PATH);
+    } catch {
+      // Backup failed - continue anyway, it's not critical
+    }
+  }
+
+  // Write to temp file first
+  const content = JSON.stringify(settings, null, 2) + '\n';
+  writeFileSync(SETTINGS_TEMP_PATH, content, { mode: PERMISSIONS.FILE });
+
+  // Atomic rename (this is atomic on POSIX filesystems)
+  renameSync(SETTINGS_TEMP_PATH, SETTINGS_PATH);
+}
+
+/**
+ * Clean up temp file if it exists (call on error recovery)
+ */
+export function cleanupTempFiles(): void {
+  try {
+    if (existsSync(SETTINGS_TEMP_PATH)) {
+      unlinkSync(SETTINGS_TEMP_PATH);
+    }
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+/**
+ * Check if a backup file exists
+ */
+export function hasBackup(): boolean {
+  return existsSync(SETTINGS_BACKUP_PATH);
+}
+
+/**
+ * Restore settings from backup file
+ * Returns true if restore was successful
+ */
+export function restoreFromBackup(): boolean {
+  try {
+    if (!existsSync(SETTINGS_BACKUP_PATH)) {
+      return false;
+    }
+
+    // Verify backup is valid JSON before restoring
+    const content = readFileSync(SETTINGS_BACKUP_PATH, 'utf-8');
+    JSON.parse(content); // Will throw if invalid
+
+    // Atomic restore
+    copyFileSync(SETTINGS_BACKUP_PATH, SETTINGS_PATH);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get the backup file path
+ */
+export function getBackupPath(): string {
+  return SETTINGS_BACKUP_PATH;
+}
+
+/**
  * Write Claude settings (merges with existing)
+ * Uses atomic write pattern to prevent corruption
  */
 export function writeSettings(updates: Partial<ClaudeSettings>): void {
   const current = readSettings();
   const merged = { ...current, ...updates };
-
-  // Ensure directory exists
-  const dir = dirname(SETTINGS_PATH);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-
-  writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2) + '\n');
+  writeSettingsAtomic(merged);
 }
 
 /**
@@ -57,14 +178,14 @@ export function getBedrockConfig(): BedrockConfig | null {
   const settings = readSettings();
   const env = settings.env || {};
 
-  if (env.CLAUDE_CODE_USE_BEDROCK !== '1') {
+  if (env[ENV_KEYS.USE_BEDROCK] !== ENV_VALUES.BEDROCK_ENABLED) {
     return null;
   }
 
   return {
-    profile: env.AWS_PROFILE || null,
-    region: env.AWS_REGION || null,
-    model: env.ANTHROPIC_MODEL || null
+    profile: env[ENV_KEYS.AWS_PROFILE] || null,
+    region: env[ENV_KEYS.AWS_REGION] || null,
+    model: env[ENV_KEYS.ANTHROPIC_MODEL] || null
   };
 }
 
@@ -82,10 +203,10 @@ export function applyBedrockConfig(config: {
     ...settings,
     env: {
       ...(settings.env || {}),
-      CLAUDE_CODE_USE_BEDROCK: '1',
-      AWS_PROFILE: config.profile,
-      AWS_REGION: config.region,
-      ANTHROPIC_MODEL: config.model
+      [ENV_KEYS.USE_BEDROCK]: ENV_VALUES.BEDROCK_ENABLED,
+      [ENV_KEYS.AWS_PROFILE]: config.profile,
+      [ENV_KEYS.AWS_REGION]: config.region,
+      [ENV_KEYS.ANTHROPIC_MODEL]: config.model
     },
     awsAuthRefresh: `aws sso login --profile ${config.profile}`
   });
@@ -102,15 +223,22 @@ function isBedrockModel(modelId: string | undefined): boolean {
 
 /**
  * Remove Bedrock configuration from settings
+ * Also removes inference settings since they're Bedrock-specific
  */
 export function removeBedrockConfig(): void {
   const settings = readSettings();
   const env = { ...(settings.env || {}) };
 
-  delete env.CLAUDE_CODE_USE_BEDROCK;
-  delete env.AWS_PROFILE;
-  delete env.AWS_REGION;
-  delete env.ANTHROPIC_MODEL;
+  // Remove Bedrock config
+  delete env[ENV_KEYS.USE_BEDROCK];
+  delete env[ENV_KEYS.AWS_PROFILE];
+  delete env[ENV_KEYS.AWS_REGION];
+  delete env[ENV_KEYS.ANTHROPIC_MODEL];
+
+  // Also remove inference settings (Bedrock-specific)
+  delete env[ENV_KEYS.MAX_THINKING_TOKENS];
+  delete env[ENV_KEYS.MAX_OUTPUT_TOKENS];
+  delete env[ENV_KEYS.DISABLE_PROMPT_CACHING];
 
   const updated = { ...settings };
   delete updated.awsAuthRefresh;
@@ -126,12 +254,8 @@ export function removeBedrockConfig(): void {
     delete updated.env;
   }
 
-  // Write directly to file (bypass merge in writeSettings since we're removing keys)
-  const dir = dirname(SETTINGS_PATH);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-  writeFileSync(SETTINGS_PATH, JSON.stringify(updated, null, 2) + '\n');
+  // Write using atomic pattern
+  writeSettingsAtomic(updated);
 }
 
 /**
@@ -146,4 +270,147 @@ export function isBedrockConfigured(): boolean {
  */
 export function getSettingsPath(): string {
   return SETTINGS_PATH;
+}
+
+// ============================================================================
+// Inference Configuration
+// ============================================================================
+
+export interface InferenceConfig {
+  preset: InferencePresetName;
+  thinkingTokens: number;
+  outputTokens: number;
+  promptCachingDisabled: boolean;
+}
+
+/**
+ * Get current inference configuration from settings
+ * Returns the preset name and current values
+ */
+export function getInferenceConfig(): InferenceConfig {
+  const settings = readSettings();
+  const env = settings.env || {};
+
+  const thinkingTokens = parseInt(env[ENV_KEYS.MAX_THINKING_TOKENS] || '0', 10);
+  const outputTokens = parseInt(env[ENV_KEYS.MAX_OUTPUT_TOKENS] || '0', 10);
+  const promptCachingDisabled = env[ENV_KEYS.DISABLE_PROMPT_CACHING] === '1';
+
+  // Determine which preset matches (if any)
+  let preset: InferencePresetName = 'custom';
+
+  if (thinkingTokens === 0 && outputTokens === 0) {
+    // No inference settings configured - return default
+    const defaultPreset = INFERENCE_PRESETS[DEFAULT_INFERENCE_PRESET];
+    return {
+      preset: DEFAULT_INFERENCE_PRESET,
+      thinkingTokens: defaultPreset.thinkingTokens,
+      outputTokens: defaultPreset.outputTokens,
+      promptCachingDisabled: false,
+    };
+  }
+
+  // Check if current values match a preset
+  for (const [name, presetConfig] of Object.entries(INFERENCE_PRESETS)) {
+    if (
+      thinkingTokens === presetConfig.thinkingTokens &&
+      outputTokens === presetConfig.outputTokens
+    ) {
+      preset = name as InferencePresetName;
+      break;
+    }
+  }
+
+  return {
+    preset,
+    thinkingTokens: thinkingTokens || INFERENCE_PRESETS[DEFAULT_INFERENCE_PRESET].thinkingTokens,
+    outputTokens: outputTokens || INFERENCE_PRESETS[DEFAULT_INFERENCE_PRESET].outputTokens,
+    promptCachingDisabled,
+  };
+}
+
+/**
+ * Apply inference configuration to settings
+ * Can use a preset name or custom values
+ */
+export function applyInferenceConfig(config: {
+  preset: InferencePresetName;
+  thinkingTokens?: number;
+  outputTokens?: number;
+}): void {
+  const settings = readSettings();
+
+  let thinkingTokens: number;
+  let outputTokens: number;
+
+  if (config.preset === 'custom') {
+    // Custom values - validate they're in range
+    thinkingTokens = Math.max(
+      INFERENCE_TOKEN_RANGE.MIN,
+      Math.min(INFERENCE_TOKEN_RANGE.MAX, config.thinkingTokens || INFERENCE_TOKEN_RANGE.MIN)
+    );
+    outputTokens = Math.max(
+      INFERENCE_TOKEN_RANGE.MIN,
+      Math.min(INFERENCE_TOKEN_RANGE.MAX, config.outputTokens || INFERENCE_TOKEN_RANGE.MIN)
+    );
+  } else {
+    // Use preset values - config.preset is now narrowed to StandardPresetName
+    const presetName = config.preset as StandardPresetName;
+    const preset = INFERENCE_PRESETS[presetName];
+    thinkingTokens = preset.thinkingTokens;
+    outputTokens = preset.outputTokens;
+  }
+
+  writeSettings({
+    ...settings,
+    env: {
+      ...(settings.env || {}),
+      [ENV_KEYS.MAX_THINKING_TOKENS]: thinkingTokens.toString(),
+      [ENV_KEYS.MAX_OUTPUT_TOKENS]: outputTokens.toString(),
+      // Explicitly set prompt caching to enabled (0 = enabled)
+      [ENV_KEYS.DISABLE_PROMPT_CACHING]: '0',
+    },
+  });
+}
+
+/**
+ * Remove inference configuration from settings
+ */
+export function removeInferenceConfig(): void {
+  const settings = readSettings();
+  const env = { ...(settings.env || {}) };
+
+  delete env[ENV_KEYS.MAX_THINKING_TOKENS];
+  delete env[ENV_KEYS.MAX_OUTPUT_TOKENS];
+  delete env[ENV_KEYS.DISABLE_PROMPT_CACHING];
+
+  const updated = { ...settings };
+
+  if (Object.keys(env).length > 0) {
+    updated.env = env;
+  } else {
+    delete updated.env;
+  }
+
+  writeSettingsAtomic(updated);
+}
+
+/**
+ * Get all available inference presets for display
+ */
+export function getInferencePresets(): InferencePreset[] {
+  return Object.values(INFERENCE_PRESETS);
+}
+
+/**
+ * Get a specific preset by name
+ */
+export function getInferencePreset(name: Exclude<InferencePresetName, 'custom'>): InferencePreset {
+  return INFERENCE_PRESETS[name];
+}
+
+/**
+ * Get the valid token range for custom values
+ */
+export function getInferenceTokenRange(): { min: number; max: number } {
+  return { min: INFERENCE_TOKEN_RANGE.MIN, max: INFERENCE_TOKEN_RANGE.MAX };
 }
