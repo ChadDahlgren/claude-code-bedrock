@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "AWS Bedrock integration for Claude Code",
-    "version": "1.0.6"
+    "version": "1.0.7"
   },
   "plugins": [
     {
       "name": "bedrock",
       "source": "./plugin",
       "description": "AWS Bedrock integration for Claude Code. Run /bedrock:manage after install to configure.",
-      "version": "1.0.6",
+      "version": "1.0.7",
       "author": {
         "name": "Chad Dahlgren"
       },
