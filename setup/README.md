@@ -1,82 +1,47 @@
 # Claude Code + AWS Bedrock Setup
 
-Interactive scripts to configure [Claude Code](https://docs.anthropic.com/en/docs/claude-code) to use AWS Bedrock instead of the Anthropic API.
-
-## What These Scripts Do
-
-- Install prerequisites (Homebrew, AWS CLI, Claude Code) if needed
-- Configure AWS SSO authentication with your organization's SSO portal
-- Set up 90-day refresh tokens (instead of 8-hour sessions)
-- Verify Bedrock access and find a working region
-- Write Claude Code settings to `~/.claude/settings.json`
+Interactive script to configure [Claude Code](https://docs.anthropic.com/en/docs/claude-code) to use AWS Bedrock instead of the Anthropic API.
 
 ## Quick Start (Run Directly from GitHub)
 
-You can run the setup script directly without cloning the repository:
-
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ChadDahlgren/claude-code-bedrock/main/setup/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ChadDahlgren/claude-code-bedrock/main/setup/setup-claude-bedrock.sh)
 ```
 
-Or if you prefer the TUI version with a nicer interface:
+To disable Bedrock and revert to the Anthropic API:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ChadDahlgren/claude-code-bedrock/main/setup/install.sh) --tui
+bash <(curl -fsSL https://raw.githubusercontent.com/ChadDahlgren/claude-code-bedrock/main/setup/setup-claude-bedrock.sh) --disable
 ```
 
-### What the One-Liner Does
+## What It Does
 
-1. Downloads the setup scripts to a temporary directory
-2. Runs the interactive setup
-3. Cleans up temporary files when done
+- Installs prerequisites (Homebrew, AWS CLI, Claude Code) if needed
+- Configures AWS SSO authentication with your organization's SSO portal
+- Sets up 90-day refresh tokens (instead of 8-hour sessions)
+- Verifies Bedrock access and finds a working region
+- Writes Claude Code settings to `~/.claude/settings.json`
+
+## What You'll Need
+
+- Your organization's **AWS SSO URL** (get this from your IT team)
+- Access to a browser for SSO authentication
 
 ## Local Installation
 
 If you have the repository cloned:
 
 ```bash
-# Basic version (works everywhere)
 ./setup/setup-claude-bedrock.sh
-
-# TUI version (prettier, requires gum)
-./setup/setup-claude-bedrock-tui.sh
 ```
-
-## Scripts
-
-| Script | Description |
-|--------|-------------|
-| `setup-claude-bedrock.sh` | Basic bash version - works on any system |
-| `setup-claude-bedrock-tui.sh` | TUI version using [gum](https://github.com/charmbracelet/gum) for a polished experience |
-| `lib/core.sh` | Shared functions used by both scripts |
 
 ## Options
 
 ```bash
-# Run interactive setup
-./setup-claude-bedrock.sh
-
-# Disable Bedrock and revert to Anthropic API
-./setup-claude-bedrock.sh --disable
-
-# Show help
-./setup-claude-bedrock.sh --help
+./setup-claude-bedrock.sh           # Run interactive setup
+./setup-claude-bedrock.sh --disable # Disable Bedrock, revert to Anthropic API
+./setup-claude-bedrock.sh --help    # Show help
 ```
-
-## Prerequisites
-
-The scripts will check for and offer to install:
-
-- **Homebrew** (macOS only) - for installing other dependencies
-- **AWS CLI v2** - for AWS authentication and Bedrock access
-- **Claude Code** - the CLI tool itself
-
-## What You'll Need
-
-Before running the script, have ready:
-
-- Your organization's **AWS SSO URL** (get this from your IT team)
-- Access to a browser for SSO authentication
 
 ## Configuration
 
@@ -107,8 +72,6 @@ After setup, your settings are stored in `~/.claude/settings.json`:
 
 ### SSO Session Expired
 
-Re-authenticate with:
-
 ```bash
 aws sso login --profile your-profile
 ```
@@ -123,12 +86,4 @@ Contact your AWS administrator to ensure:
 
 ```bash
 cat ~/.claude/settings.json
-```
-
-### Disable Bedrock
-
-To revert to using the Anthropic API directly:
-
-```bash
-./setup-claude-bedrock.sh --disable
 ```
