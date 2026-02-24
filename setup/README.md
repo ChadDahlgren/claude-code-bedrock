@@ -49,24 +49,30 @@ After setup, your settings are stored in `~/.claude/settings.json`:
 
 ```json
 {
+  "model": "opus",
   "env": {
     "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_PROFILE": "your-profile",
-    "AWS_REGION": "us-west-2",
-    "ANTHROPIC_MODEL": "global.anthropic.claude-opus-4-5-20251101-v1:0",
-    "CLAUDE_CODE_FAST_MODEL": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    "MAX_THINKING_TOKENS": "12000",
-    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "10000"
+    "AWS_REGION": "us-west-2"
   }
 }
 ```
 
-### Tuning Token Settings
+### Switching Models
 
-| Setting | Default | Range | Description |
-|---------|---------|-------|-------------|
-| `MAX_THINKING_TOKENS` | 12,000 | 4,096 - 16,384 | Controls reasoning depth. Lower = faster, higher = more thorough |
-| `CLAUDE_CODE_MAX_OUTPUT_TOKENS` | 10,000 | 4,096 - 16,384 | Maximum response length |
+Use `/model` inside Claude Code to switch between models:
+
+| Model | Description |
+|-------|-------------|
+| `opus` | Deepest reasoning (default) |
+| `sonnet` | Fast and capable |
+| `haiku` | Fastest, lightweight tasks |
+
+Append `[1m]` for 1M token context window (e.g., `opus [1m]`, `sonnet [1m]`).
+
+### Advanced Tuning
+
+Edit `~/.claude/settings.json` to set token limits or other env vars. See the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code) for all available settings.
 
 ## Troubleshooting
 

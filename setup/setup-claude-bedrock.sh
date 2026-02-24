@@ -17,14 +17,6 @@ set -euo pipefail
 CLAUDE_SETTINGS_FILE="$HOME/.claude/settings.json"
 CLAUDE_SETTINGS_DIR="$HOME/.claude"
 
-# Default model configurations (global inference profiles)
-DEFAULT_MODEL="global.anthropic.claude-opus-4-5-20251101-v1:0"
-DEFAULT_FAST_MODEL="global.anthropic.claude-sonnet-4-5-20250929-v1:0"
-
-# Default token settings
-DEFAULT_THINKING_TOKENS="12000"
-DEFAULT_OUTPUT_TOKENS="10000"
-
 # Known Bedrock regions (in preference order)
 BEDROCK_REGIONS=(
   "us-west-2"
@@ -387,25 +379,17 @@ find_bedrock_region() {
 write_claude_settings() {
   local profile="$1"
   local region="$2"
-  local model="${3:-$DEFAULT_MODEL}"
-  local fast_model="${4:-$DEFAULT_FAST_MODEL}"
-  local thinking_tokens="${5:-$DEFAULT_THINKING_TOKENS}"
-  local output_tokens="${6:-$DEFAULT_OUTPUT_TOKENS}"
 
   mkdir -p "$CLAUDE_SETTINGS_DIR"
 
   local settings
   settings=$(cat <<EOF
 {
+  "model": "opus",
   "env": {
     "CLAUDE_CODE_USE_BEDROCK": "1",
     "AWS_PROFILE": "$profile",
-    "AWS_REGION": "$region",
-    "ANTHROPIC_MODEL": "$model",
-    "CLAUDE_CODE_FAST_MODEL": "$fast_model",
-    "MAX_THINKING_TOKENS": "$thinking_tokens",
-    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "$output_tokens",
-    "DISABLE_PROMPT_CACHING": "0"
+    "AWS_REGION": "$region"
   }
 }
 EOF
@@ -434,7 +418,7 @@ remove_bedrock_settings() {
   if command_exists jq; then
     local existing
     existing=$(cat "$CLAUDE_SETTINGS_FILE")
-    echo "$existing" | jq 'del(.env.CLAUDE_CODE_USE_BEDROCK, .env.AWS_PROFILE, .env.AWS_REGION, .env.ANTHROPIC_MODEL, .env.CLAUDE_CODE_FAST_MODEL, .env.MAX_THINKING_TOKENS, .env.CLAUDE_CODE_MAX_OUTPUT_TOKENS, .env.DISABLE_PROMPT_CACHING)' > "${CLAUDE_SETTINGS_FILE}.tmp"
+    echo "$existing" | jq 'del(.model, .env.CLAUDE_CODE_USE_BEDROCK, .env.AWS_PROFILE, .env.AWS_REGION)' > "${CLAUDE_SETTINGS_FILE}.tmp"
     mv "${CLAUDE_SETTINGS_FILE}.tmp" "$CLAUDE_SETTINGS_FILE"
     return 0
   else
@@ -776,20 +760,11 @@ main() {
   print_info "Setting up with:"
   print_info "  Profile: $selected_profile"
   print_info "  Region: $selected_region"
-  print_info "  Model: Claude Opus 4.5 (global)"
-  print_info "  Fast Model: Claude Sonnet 4.5 (global)"
-  print_info "  Thinking Tokens: 12,000"
-  print_info "  Output Tokens: 10,000"
+  print_info "  Model: opus (switchable via /model)"
   echo ""
 
   if confirm "Apply these settings?"; then
-    write_claude_settings \
-      "$selected_profile" \
-      "$selected_region" \
-      "$DEFAULT_MODEL" \
-      "$DEFAULT_FAST_MODEL" \
-      "$DEFAULT_THINKING_TOKENS" \
-      "$DEFAULT_OUTPUT_TOKENS"
+    write_claude_settings "$selected_profile" "$selected_region"
 
     print_success "Settings written to $CLAUDE_SETTINGS_FILE"
   else
@@ -804,18 +779,20 @@ main() {
   Claude Code is configured for AWS Bedrock!
 ============================================================
 
-Quick tips:
+Switching models:
 
-  Thinking tokens (12,000): Controls reasoning depth.
-    - Range: 4,096 - 16,384
-    - Lower = faster, simpler responses
-    - Higher = deeper analysis (may over-engineer simple tasks)
+  Use /model inside Claude Code to switch between:
+    - opus      (deepest reasoning, default)
+    - sonnet    (fast and capable)
+    - haiku     (fastest, lightweight tasks)
 
-  Output tokens (10,000): Maximum response length.
-    - Range: 4,096 - 16,384
-    - Increase if responses feel cut off
+  Append [1m] for 1M token context window:
+    - opus [1m], sonnet [1m]
 
-  Edit ~/.claude/settings.json to adjust these values.
+Advanced tuning:
+
+  Edit ~/.claude/settings.json to adjust env vars,
+  token limits, or other Claude Code settings.
 
 ------------------------------------------------------------
 
