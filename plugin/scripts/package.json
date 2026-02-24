@@ -1,6 +1,6 @@
 {
   "name": "bedrock-plugin-scripts",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "scripts": {
     "build": "tsc",
